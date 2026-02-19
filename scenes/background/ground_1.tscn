@@ -1,0 +1,22 @@
+[gd_scene format=3 uid="uid://bjlposj37c0vf"]
+
+[ext_resource type="PackedScene" uid="uid://7wv4wnvnijg4" path="res://assets/kenney/kenney_modular-dungeon-kit_1.0/Models/GLB format/template-floor-big.glb" id="1_51sn2"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_q4vf8"]
+height = 4.3759766
+radius = 1.0097656
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_8xlxp"]
+size = Vector3(8.010254, 1, 8.030014)
+
+[node name="template-floor-big2" unique_id=1683853112 instance=ExtResource("1_51sn2")]
+
+[node name="StaticBody3D" type="StaticBody3D" parent="." index="1" unique_id=463381364]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D" index="0" unique_id=517345363]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1879883, 0)
+shape = SubResource("CylinderShape3D_q4vf8")
+
+[node name="GroundCollisionBlock" type="CollisionShape3D" parent="StaticBody3D" index="1" unique_id=545157930]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0063476563, -0.5007317, 0.00856781)
+shape = SubResource("BoxShape3D_8xlxp")

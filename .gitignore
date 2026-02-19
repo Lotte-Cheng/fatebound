@@ -1,0 +1,23 @@
+# Godot generated
+.godot/
+.import/
+mono/
+
+# Godot export/build
+/android/
+/build/
+/export/
+
+# Local logs and runtime artifacts
+*.log
+*.tmp
+*.temp
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local tooling cache
+.claude/

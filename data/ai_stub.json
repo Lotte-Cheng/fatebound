@@ -1,0 +1,46 @@
+{
+  "default_intent": "questioning",
+  "intent_rules": [
+    {
+      "intent": "devotional",
+      "keywords": ["祈祷", "赞美", "信仰", "神明", "誓言", "献祭", "祷告", "bless"]
+    },
+    {
+      "intent": "aggressive",
+      "keywords": ["攻击", "战斗", "斩", "杀", "冲锋", "硬刚", "fight", "attack"]
+    },
+    {
+      "intent": "defensive",
+      "keywords": ["防御", "格挡", "躲", "谨慎", "稳", "保守", "guard", "defend"]
+    },
+    {
+      "intent": "questioning",
+      "keywords": ["为什么", "如何", "线索", "真相", "问题", "询问", "ask", "question"]
+    },
+    {
+      "intent": "greedy",
+      "keywords": ["奖励", "宝藏", "钥匙", "更多", "立刻给我", "财富", "loot", "reward"]
+    },
+    {
+      "intent": "deceptive",
+      "keywords": ["欺骗", "谎", "伪装", "骗", "隐瞒", "骗你", "lie", "trick"]
+    }
+  ],
+  "narrative_templates": {
+    "combat_room": [
+      "你在{encounter_name}面前说出“{player_text}”。战局向{outcome_cn}倾斜。{effect_summary}",
+      "你的话语“{player_text}”在战斗房回响，{encounter_name}立刻回应。结果：{outcome_cn}。{effect_summary}"
+    ],
+    "god_room": [
+      "{entity_name}聆听你的陈述“{player_text}”。神意判定为{attitude_id}。{effect_summary}",
+      "你向{entity_name}开口：“{player_text}”。其神情显示{attitude_id}，随后命运波动。{effect_summary}"
+    ],
+    "secret_room": [
+      "你在密室前低语“{player_text}”。本次结果：{secret_outcome_cn}。{effect_summary}",
+      "密室回应你的意图“{player_text}”。判定为{secret_outcome_cn}。{effect_summary}"
+    ],
+    "fallback": [
+      "你说出“{player_text}”，世界静静记录了这一选择。{effect_summary}"
+    ]
+  }
+}

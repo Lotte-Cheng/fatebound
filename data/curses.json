@@ -1,0 +1,99 @@
+{
+  "curses": [
+    {
+      "id": "curse_oath_rebuke",
+      "label": "誓约责罚",
+      "severity": 1,
+      "tags": ["discipline"],
+      "trigger": "after_room",
+      "effect": { "atk": -1 },
+      "effects": { "atk": -1 }
+    },
+    {
+      "id": "curse_oath_scar",
+      "label": "圣痕灼伤",
+      "severity": 1,
+      "tags": ["hp_loss"],
+      "trigger": "on_combat_start",
+      "effect": { "hp": -2 },
+      "effects": { "hp": -2 }
+    },
+
+    {
+      "id": "curse_war_bleed",
+      "label": "战伤失血",
+      "severity": 2,
+      "tags": ["hp_loss", "high_risk"],
+      "trigger": "on_combat_end",
+      "effect": { "hp": -2 },
+      "effects": { "hp": -2 }
+    },
+    {
+      "id": "curse_war_fracture",
+      "label": "护甲断裂",
+      "severity": 1,
+      "tags": ["def_loss"],
+      "trigger": "immediate",
+      "effect": { "def": -1 },
+      "effects": { "def": -1 }
+    },
+
+    {
+      "id": "curse_mystic_blur",
+      "label": "命盘错位",
+      "severity": 1,
+      "tags": ["fate_loss"],
+      "trigger": "after_room",
+      "condition": { "stat": "fate", "op": ">=", "value": 2 },
+      "effect": { "fate": -1 },
+      "effects": { "fate": -1 }
+    },
+    {
+      "id": "curse_mystic_echo",
+      "label": "回声侵蚀",
+      "severity": 1,
+      "tags": ["corruption"],
+      "trigger": "on_enter_secret_room",
+      "effect": { "corruption": 1 },
+      "effects": { "corruption": 1 }
+    },
+
+    {
+      "id": "curse_abyss_mark",
+      "label": "深渊印记",
+      "severity": 2,
+      "tags": ["corruption", "high_risk"],
+      "trigger": "on_combat_start",
+      "effect": { "corruption": 2 },
+      "effects": { "corruption": 2 }
+    },
+    {
+      "id": "curse_abyss_drain",
+      "label": "灵魂流失",
+      "severity": 2,
+      "tags": ["hp_loss", "corruption", "high_risk"],
+      "trigger": "on_use_key",
+      "effect": { "hp": -2, "corruption": 1 },
+      "effects": { "hp": -2, "corruption": 1 }
+    },
+    {
+      "id": "curse_abyss_twist",
+      "label": "命线扭曲",
+      "severity": 2,
+      "tags": ["fate_loss", "corruption", "high_risk"],
+      "trigger": "after_room",
+      "effect": { "fate": -1, "corruption": 1 },
+      "effects": { "fate": -1, "corruption": 1 }
+    },
+    {
+      "id": "curse_pact_debt",
+      "label": "契约债务",
+      "severity": 1,
+      "tags": ["contract"],
+      "trigger": "on_combat_start",
+      "condition": { "stance": "pact" },
+      "effect": { "hp": -1, "corruption": 1 },
+      "effects": { "hp": -1, "corruption": 1 }
+    }
+  ]
+}

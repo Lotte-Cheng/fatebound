@@ -1,0 +1,143 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/dialog_panel.gd" id="1_dialog"]
+
+[node name="DialogPanel" type="PanelContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("1_dialog")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+
+[node name="StanceRow" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="StanceLabel" type="Label" parent="VBox/StanceRow"]
+layout_mode = 2
+text = "祈求姿态："
+
+[node name="RestraintButton" type="Button" parent="VBox/StanceRow"]
+layout_mode = 2
+text = "restraint（克制）"
+toggle_mode = true
+button_pressed = true
+
+[node name="PactButton" type="Button" parent="VBox/StanceRow"]
+layout_mode = 2
+text = "pact（契约）"
+toggle_mode = true
+
+[node name="BlasphemyButton" type="Button" parent="VBox/StanceRow"]
+layout_mode = 2
+text = "blasphemy（亵渎）"
+toggle_mode = true
+
+[node name="SelectedStanceLabel" type="Label" parent="VBox/StanceRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+horizontal_alignment = 2
+text = "当前：restraint"
+
+[node name="InputRow" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ActionInput" type="LineEdit" parent="VBox/InputRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "输入一句话（可选）"
+
+[node name="SendButton" type="Button" parent="VBox/InputRow"]
+layout_mode = 2
+text = "发送"
+
+[node name="MainSplit" type="VSplitContainer" parent="VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+split_offset = 320
+
+[node name="TopTabs" type="TabContainer" parent="VBox/MainSplit"]
+layout_mode = 2
+size_flags_vertical = 3
+current_tab = 1
+
+[node name="IntentTab" type="VBoxContainer" parent="VBox/MainSplit/TopTabs"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="IntentTitle" type="Label" parent="VBox/MainSplit/TopTabs/IntentTab"]
+layout_mode = 2
+text = "intent.json（意图解析输出）"
+
+[node name="IntentOutput" type="RichTextLabel" parent="VBox/MainSplit/TopTabs/IntentTab"]
+custom_minimum_size = Vector2(0, 180)
+layout_mode = 2
+size_flags_vertical = 3
+scroll_active = true
+selection_enabled = true
+
+[node name="ResolutionTab" type="VBoxContainer" parent="VBox/MainSplit/TopTabs"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="ResolutionTitle" type="Label" parent="VBox/MainSplit/TopTabs/ResolutionTab"]
+layout_mode = 2
+text = "resolution（规则引擎输出）"
+
+[node name="ResolutionOutput" type="RichTextLabel" parent="VBox/MainSplit/TopTabs/ResolutionTab"]
+custom_minimum_size = Vector2(0, 180)
+layout_mode = 2
+size_flags_vertical = 3
+scroll_active = true
+selection_enabled = true
+
+[node name="NarrativeTab" type="VBoxContainer" parent="VBox/MainSplit/TopTabs"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="NarrativeTitle" type="Label" parent="VBox/MainSplit/TopTabs/NarrativeTab"]
+layout_mode = 2
+text = "narrative（神谕文本，仅复述规则结果）"
+
+[node name="NarrativeOutput" type="RichTextLabel" parent="VBox/MainSplit/TopTabs/NarrativeTab"]
+custom_minimum_size = Vector2(0, 180)
+layout_mode = 2
+size_flags_vertical = 3
+scroll_active = true
+selection_enabled = true
+
+[node name="DebtTab" type="VBoxContainer" parent="VBox/MainSplit/TopTabs"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="DebtTitle" type="Label" parent="VBox/MainSplit/TopTabs/DebtTab"]
+layout_mode = 2
+text = "pending_effects（债务/延迟诅咒）"
+
+[node name="DebtOutput" type="RichTextLabel" parent="VBox/MainSplit/TopTabs/DebtTab"]
+custom_minimum_size = Vector2(0, 180)
+layout_mode = 2
+size_flags_vertical = 3
+scroll_active = true
+selection_enabled = true
+
+[node name="LogSection" type="VBoxContainer" parent="VBox/MainSplit"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 6
+
+[node name="EventLogTitle" type="Label" parent="VBox/MainSplit/LogSection"]
+layout_mode = 2
+text = "回合日志"
+
+[node name="EventLog" type="RichTextLabel" parent="VBox/MainSplit/LogSection"]
+custom_minimum_size = Vector2(0, 220)
+layout_mode = 2
+size_flags_vertical = 3
+scroll_active = true
+scroll_following = true
+selection_enabled = true

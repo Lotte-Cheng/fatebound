@@ -1,0 +1,178 @@
+{
+  "gods": [
+    {
+      "id": "solune",
+      "name": "索露恩",
+      "role": "god",
+      "persona": "誓约与晨光之神，重视克制、承诺与守护。",
+      "speech_style": "庄重、温和、判词明确",
+      "reward_pool": [
+        { "id": "boon_oath_guard", "weight": 1.0 },
+        { "id": "boon_oath_heal", "weight": 1.0 },
+        { "id": "boon_oath_fate", "weight": 0.8 },
+        { "id": "boon_oath_key", "weight": 0.6 }
+      ],
+      "curse_pool": [
+        { "id": "curse_oath_rebuke", "weight": 1.0 },
+        { "id": "curse_oath_scar", "weight": 0.9 },
+        { "id": "curse_pact_debt", "weight": 0.8 }
+      ],
+      "stance_modifiers": {
+        "restraint": {
+          "reward_roll_mult": 0.9,
+          "curse_roll_mult": 0.5,
+          "corruption_delta_bonus": 0,
+          "reward_tag_bias": { "defense": 1.2, "heal": 1.2 },
+          "curse_tag_bias": { "high_risk": 0.5 },
+          "forced_curse_ids": []
+        },
+        "pact": {
+          "reward_roll_mult": 1.2,
+          "curse_roll_mult": 1.0,
+          "corruption_delta_bonus": 0,
+          "reward_tag_bias": { "key": 1.2, "fate": 1.1 },
+          "curse_tag_bias": { "contract": 2.0 },
+          "forced_curse_ids": ["curse_pact_debt"]
+        },
+        "blasphemy": {
+          "reward_roll_mult": 1.6,
+          "curse_roll_mult": 1.7,
+          "corruption_delta_bonus": 1,
+          "reward_tag_bias": { "high_risk": 1.4 },
+          "curse_tag_bias": { "corruption": 1.8, "high_risk": 1.6 },
+          "forced_curse_ids": ["curse_abyss_mark"]
+        }
+      }
+    },
+    {
+      "id": "tharos",
+      "name": "萨洛斯",
+      "role": "god",
+      "persona": "战争与荣耀之神，偏好冒险与决断。",
+      "speech_style": "强势、直接、鼓动战意",
+      "reward_pool": [
+        { "id": "boon_war_power", "weight": 1.0 },
+        { "id": "boon_war_rush", "weight": 0.9 },
+        { "id": "boon_war_loot", "weight": 0.7 }
+      ],
+      "curse_pool": [
+        { "id": "curse_war_bleed", "weight": 1.0 },
+        { "id": "curse_war_fracture", "weight": 0.8 },
+        { "id": "curse_pact_debt", "weight": 0.8 }
+      ],
+      "stance_modifiers": {
+        "restraint": {
+          "reward_roll_mult": 0.8,
+          "curse_roll_mult": 0.5,
+          "corruption_delta_bonus": 0,
+          "reward_tag_bias": { "combat_boost": 1.0 },
+          "curse_tag_bias": { "hp_loss": 0.7 },
+          "forced_curse_ids": []
+        },
+        "pact": {
+          "reward_roll_mult": 1.2,
+          "curse_roll_mult": 1.0,
+          "corruption_delta_bonus": 0,
+          "reward_tag_bias": { "combat_boost": 1.2 },
+          "curse_tag_bias": { "contract": 2.0 },
+          "forced_curse_ids": ["curse_pact_debt"]
+        },
+        "blasphemy": {
+          "reward_roll_mult": 1.7,
+          "curse_roll_mult": 1.8,
+          "corruption_delta_bonus": 1,
+          "reward_tag_bias": { "combat_boost": 1.4, "high_risk": 1.4 },
+          "curse_tag_bias": { "hp_loss": 1.5, "corruption": 1.5 },
+          "forced_curse_ids": ["curse_war_bleed"]
+        }
+      }
+    },
+    {
+      "id": "nyra",
+      "name": "妮拉",
+      "role": "god",
+      "persona": "奥秘与命途之神，偏爱提问与洞察。",
+      "speech_style": "隐喻、冷静、引导思考",
+      "reward_pool": [
+        { "id": "boon_mystic_insight", "weight": 1.0 },
+        { "id": "boon_mystic_cleanse", "weight": 0.8 },
+        { "id": "boon_mystic_key", "weight": 0.9 }
+      ],
+      "curse_pool": [
+        { "id": "curse_mystic_blur", "weight": 1.0 },
+        { "id": "curse_mystic_echo", "weight": 0.8 },
+        { "id": "curse_pact_debt", "weight": 0.8 }
+      ],
+      "stance_modifiers": {
+        "restraint": {
+          "reward_roll_mult": 1.0,
+          "curse_roll_mult": 0.5,
+          "corruption_delta_bonus": 0,
+          "reward_tag_bias": { "knowledge": 1.2, "cleanse": 1.2 },
+          "curse_tag_bias": { "corruption": 0.6 },
+          "forced_curse_ids": []
+        },
+        "pact": {
+          "reward_roll_mult": 1.2,
+          "curse_roll_mult": 1.0,
+          "corruption_delta_bonus": 0,
+          "reward_tag_bias": { "knowledge": 1.1, "key_request": 1.2 },
+          "curse_tag_bias": { "contract": 2.0 },
+          "forced_curse_ids": ["curse_pact_debt"]
+        },
+        "blasphemy": {
+          "reward_roll_mult": 1.5,
+          "curse_roll_mult": 1.7,
+          "corruption_delta_bonus": 1,
+          "reward_tag_bias": { "high_risk": 1.3 },
+          "curse_tag_bias": { "fate_loss": 1.5, "corruption": 1.4 },
+          "forced_curse_ids": ["curse_abyss_twist"]
+        }
+      }
+    },
+    {
+      "id": "murmur",
+      "name": "低语邪灵",
+      "role": "evil_spirit",
+      "persona": "深渊邪灵，擅长诱惑交易与代价置换。",
+      "speech_style": "蛊惑、暧昧、逐字施压",
+      "reward_pool": [
+        { "id": "boon_abyss_bargain", "weight": 1.0 },
+        { "id": "boon_abyss_key", "weight": 0.9 },
+        { "id": "boon_abyss_fate", "weight": 0.7 }
+      ],
+      "curse_pool": [
+        { "id": "curse_abyss_mark", "weight": 1.0 },
+        { "id": "curse_abyss_drain", "weight": 1.0 },
+        { "id": "curse_abyss_twist", "weight": 0.8 },
+        { "id": "curse_pact_debt", "weight": 0.8 }
+      ],
+      "stance_modifiers": {
+        "restraint": {
+          "reward_roll_mult": 0.8,
+          "curse_roll_mult": 0.8,
+          "corruption_delta_bonus": 0,
+          "reward_tag_bias": { "high_risk": 0.7 },
+          "curse_tag_bias": { "corruption": 1.1 },
+          "forced_curse_ids": []
+        },
+        "pact": {
+          "reward_roll_mult": 1.2,
+          "curse_roll_mult": 1.2,
+          "corruption_delta_bonus": 1,
+          "reward_tag_bias": { "high_risk": 1.2, "key_request": 1.2 },
+          "curse_tag_bias": { "contract": 2.0, "corruption": 1.3 },
+          "forced_curse_ids": ["curse_pact_debt"]
+        },
+        "blasphemy": {
+          "reward_roll_mult": 1.8,
+          "curse_roll_mult": 2.0,
+          "corruption_delta_bonus": 2,
+          "reward_tag_bias": { "high_risk": 1.6 },
+          "curse_tag_bias": { "corruption": 1.8, "high_risk": 1.8 },
+          "forced_curse_ids": ["curse_abyss_mark", "curse_abyss_drain"]
+        }
+      }
+    }
+  ]
+}

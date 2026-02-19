@@ -1,0 +1,151 @@
+{
+  "seed": 20260208,
+  "initial_state": {
+    "hp": 26,
+    "atk": 3,
+    "def": 1,
+    "corruption": 0,
+    "fate": 0,
+    "keys": 1,
+    "pending_effects": [],
+    "turn": 1
+  },
+  "state_limits": {
+    "hp": { "min": 0, "max": 40 },
+    "atk": { "min": 0, "max": 12 },
+    "def": { "min": 0, "max": 12 },
+    "corruption": { "min": 0, "max": 20 },
+    "fate": { "min": -10, "max": 40 },
+    "keys": { "min": 0, "max": 99 }
+  },
+  "demo_rooms": [
+    {
+      "id": "r01",
+      "display_name": "晨誓神殿",
+      "type": "god_room",
+      "god_id": "solune",
+      "reward_rolls": 1,
+      "curse_rolls": 1,
+      "tags": ["intro"]
+    },
+    {
+      "id": "r02",
+      "display_name": "铁火战场",
+      "type": "combat_room",
+      "god_id": "tharos",
+      "reward_rolls": 1,
+      "curse_rolls": 1,
+      "enemy_hp": 7,
+      "enemy_atk": 3,
+      "enemy_def": 1,
+      "min_atk": 4,
+      "min_def": 2,
+      "corruption_threshold": 2,
+      "fate_threshold": 3,
+      "key_drop_on_win": 1,
+      "tags": ["combat", "gate_test"]
+    },
+    {
+      "id": "r03",
+      "display_name": "封印密室",
+      "type": "secret_room",
+      "god_id": "nyra",
+      "requires_keys": 1,
+      "unlock_reward_rolls": 2,
+      "unlock_curse_rolls": 0,
+      "locked_reward_rolls": 0,
+      "locked_curse_rolls": 1,
+      "tags": ["key_gate"]
+    },
+    {
+      "id": "r04",
+      "display_name": "回音走廊",
+      "type": "combat_room",
+      "god_id": "murmur",
+      "reward_rolls": 1,
+      "curse_rolls": 1,
+      "enemy_hp": 8,
+      "enemy_atk": 4,
+      "enemy_def": 1,
+      "min_atk": 5,
+      "min_def": 2,
+      "corruption_threshold": 3,
+      "fate_threshold": 4,
+      "key_drop_on_win": 1,
+      "tags": ["combat", "high_risk"]
+    },
+    {
+      "id": "r05",
+      "display_name": "命理圣坛",
+      "type": "god_room",
+      "god_id": "nyra",
+      "reward_rolls": 1,
+      "curse_rolls": 1,
+      "tags": ["knowledge"]
+    },
+    {
+      "id": "r06",
+      "display_name": "断旗废墟",
+      "type": "combat_room",
+      "god_id": "tharos",
+      "reward_rolls": 1,
+      "curse_rolls": 1,
+      "enemy_hp": 9,
+      "enemy_atk": 4,
+      "enemy_def": 2,
+      "min_atk": 5,
+      "min_def": 3,
+      "corruption_threshold": 4,
+      "fate_threshold": 5,
+      "key_drop_on_win": 1,
+      "tags": ["combat"]
+    },
+    {
+      "id": "r07",
+      "display_name": "幽锁密室",
+      "type": "secret_room",
+      "god_id": "murmur",
+      "requires_keys": 1,
+      "unlock_reward_rolls": 2,
+      "unlock_curse_rolls": 0,
+      "locked_reward_rolls": 0,
+      "locked_curse_rolls": 1,
+      "tags": ["key_gate", "high_risk"]
+    },
+    {
+      "id": "r08",
+      "display_name": "辉誓祭坛",
+      "type": "god_room",
+      "god_id": "solune",
+      "reward_rolls": 1,
+      "curse_rolls": 1,
+      "tags": ["oath"]
+    },
+    {
+      "id": "r09",
+      "display_name": "裂谷战圈",
+      "type": "combat_room",
+      "god_id": "tharos",
+      "reward_rolls": 1,
+      "curse_rolls": 1,
+      "enemy_hp": 10,
+      "enemy_atk": 5,
+      "enemy_def": 2,
+      "min_atk": 6,
+      "min_def": 3,
+      "corruption_threshold": 5,
+      "fate_threshold": 6,
+      "key_drop_on_win": 1,
+      "tags": ["combat"]
+    },
+    {
+      "id": "r10",
+      "display_name": "终末低语厅",
+      "type": "god_room",
+      "god_id": "murmur",
+      "reward_rolls": 1,
+      "curse_rolls": 1,
+      "tags": ["finale"]
+    }
+  ]
+}

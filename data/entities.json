@@ -1,0 +1,97 @@
+{
+  "entities": [
+    {
+      "id": "solune",
+      "name": "索露恩",
+      "role": "god",
+      "persona": "誓约与晨光之神，重视秩序、承诺与牺牲。",
+      "intent_bias": {
+        "devotional": 2,
+        "defensive": 1,
+        "questioning": 0,
+        "aggressive": -1,
+        "greedy": -1,
+        "deceptive": -2
+      },
+      "reward_pool": [
+        { "id": "solune_oath_hp", "type": "stat", "stat": "hp", "delta": 3, "label": "晨光庇佑：HP +3", "weight": 1.0 },
+        { "id": "solune_oath_def", "type": "stat", "stat": "def", "delta": 1, "label": "誓约护盾：DEF +1", "weight": 1.0 },
+        { "id": "solune_oath_fate", "type": "stat", "stat": "fate", "delta": 2, "label": "命线校准：Fate +2", "weight": 0.9 }
+      ],
+      "curse_pool": [
+        { "id": "solune_curse_atk", "type": "stat", "stat": "atk", "delta": -1, "label": "誓约裂痕：ATK -1", "weight": 1.0 },
+        { "id": "solune_curse_corruption", "type": "stat", "stat": "corruption", "delta": 1, "label": "圣火灼伤：Corruption +1", "weight": 0.7 }
+      ]
+    },
+    {
+      "id": "tharos",
+      "name": "萨洛斯",
+      "role": "god",
+      "persona": "战争与荣耀之神，偏爱强势与决断。",
+      "intent_bias": {
+        "aggressive": 2,
+        "defensive": 0,
+        "questioning": -1,
+        "devotional": 1,
+        "greedy": 0,
+        "deceptive": -2
+      },
+      "reward_pool": [
+        { "id": "tharos_boon_atk", "type": "stat", "stat": "atk", "delta": 2, "label": "血战赐福：ATK +2", "weight": 1.0 },
+        { "id": "tharos_boon_hp", "type": "stat", "stat": "hp", "delta": 2, "label": "战争亢奋：HP +2", "weight": 0.8 },
+        { "id": "tharos_boon_fate", "type": "stat", "stat": "fate", "delta": 1, "label": "凯旋星火：Fate +1", "weight": 0.8 }
+      ],
+      "curse_pool": [
+        { "id": "tharos_curse_hp", "type": "stat", "stat": "hp", "delta": -3, "label": "战意反噬：HP -3", "weight": 1.0 },
+        { "id": "tharos_curse_def", "type": "stat", "stat": "def", "delta": -1, "label": "护甲崩裂：DEF -1", "weight": 0.9 }
+      ]
+    },
+    {
+      "id": "nyra",
+      "name": "妮拉",
+      "role": "god",
+      "persona": "奥秘与命途之神，欣赏思考与提问。",
+      "intent_bias": {
+        "questioning": 2,
+        "defensive": 1,
+        "devotional": 1,
+        "aggressive": -1,
+        "greedy": -1,
+        "deceptive": -1
+      },
+      "reward_pool": [
+        { "id": "nyra_boon_fate", "type": "stat", "stat": "fate", "delta": 3, "label": "命运回声：Fate +3", "weight": 1.0 },
+        { "id": "nyra_boon_key", "type": "inventory", "item": "keys", "delta": 1, "label": "秘钥回赠：Keys +1", "weight": 0.9 },
+        { "id": "nyra_boon_corruption", "type": "stat", "stat": "corruption", "delta": -1, "label": "净化低语：Corruption -1", "weight": 0.8 }
+      ],
+      "curse_pool": [
+        { "id": "nyra_curse_fate", "type": "stat", "stat": "fate", "delta": -2, "label": "错位命盘：Fate -2", "weight": 1.0 },
+        { "id": "nyra_curse_hp", "type": "stat", "stat": "hp", "delta": -2, "label": "反噬符文：HP -2", "weight": 0.8 }
+      ]
+    },
+    {
+      "id": "murmur",
+      "name": "低语邪灵",
+      "role": "evil_spirit",
+      "persona": "深渊邪灵，擅长诱惑、交易与扭曲愿望。",
+      "intent_bias": {
+        "greedy": 2,
+        "deceptive": 2,
+        "aggressive": 1,
+        "questioning": -1,
+        "defensive": -1,
+        "devotional": -2
+      },
+      "reward_pool": [
+        { "id": "murmur_boon_atk", "type": "stat", "stat": "atk", "delta": 2, "label": "深渊狂喜：ATK +2", "weight": 1.0 },
+        { "id": "murmur_boon_key", "type": "inventory", "item": "keys", "delta": 2, "label": "黑钥馈赠：Keys +2", "weight": 0.8 },
+        { "id": "murmur_boon_fate", "type": "stat", "stat": "fate", "delta": 2, "label": "扭曲幸运：Fate +2", "weight": 0.7 }
+      ],
+      "curse_pool": [
+        { "id": "murmur_curse_corruption", "type": "stat", "stat": "corruption", "delta": 2, "label": "深渊印记：Corruption +2", "weight": 1.0 },
+        { "id": "murmur_curse_hp", "type": "stat", "stat": "hp", "delta": -2, "label": "灵魂渗血：HP -2", "weight": 0.9 },
+        { "id": "murmur_curse_fate", "type": "stat", "stat": "fate", "delta": -1, "label": "命线污染：Fate -1", "weight": 0.8 }
+      ]
+    }
+  ]
+}

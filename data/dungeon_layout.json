@@ -1,0 +1,158 @@
+{
+  "seed": 20260219,
+  "start_room_id": "r00",
+  "grid": {
+    "cols": 3,
+    "rows": 3
+  },
+  "initial_state": {
+    "hp": 28,
+    "atk": 3,
+    "def": 1,
+    "corruption": 0,
+    "fate": 0,
+    "keys": 0
+  },
+  "rooms": [
+    {
+      "id": "r00",
+      "name": "起始回廊",
+      "type": "start",
+      "x": 0,
+      "y": 0,
+      "enemy_count": 1,
+      "key_reward": 0,
+      "exits": [
+        { "dir": "right", "to": "r10" },
+        { "dir": "down", "to": "r01" }
+      ]
+    },
+    {
+      "id": "r10",
+      "name": "薄暮祈福室",
+      "type": "prayer",
+      "deity_name": "索露恩神像",
+      "x": 1,
+      "y": 0,
+      "enemy_count": 1,
+      "key_reward": 0,
+      "prayer_pool": [
+        { "label": "战意赐福", "effect": { "atk": 1 } },
+        { "label": "护身赐福", "effect": { "def": 1 } },
+        { "label": "命运赐福", "effect": { "fate": 2 } }
+      ],
+      "exits": [
+        { "dir": "left", "to": "r00" },
+        { "dir": "right", "to": "r20" },
+        { "dir": "down", "to": "r11" }
+      ]
+    },
+    {
+      "id": "r20",
+      "name": "尖啸战厅",
+      "type": "battle",
+      "x": 2,
+      "y": 0,
+      "enemy_count": 2,
+      "enemy_types": ["chaser", "shooter"],
+      "key_reward": 1,
+      "exits": [
+        { "dir": "left", "to": "r10" },
+        { "dir": "down", "to": "r21" }
+      ]
+    },
+    {
+      "id": "r01",
+      "name": "裂纹甬道",
+      "type": "battle",
+      "x": 0,
+      "y": 1,
+      "enemy_count": 2,
+      "key_reward": 1,
+      "exits": [
+        { "dir": "up", "to": "r00" },
+        { "dir": "right", "to": "r11" },
+        { "dir": "down", "to": "r02" }
+      ]
+    },
+    {
+      "id": "r11",
+      "name": "分岔战域",
+      "type": "battle",
+      "x": 1,
+      "y": 1,
+      "enemy_count": 2,
+      "enemy_types": ["chaser", "shooter"],
+      "key_reward": 0,
+      "exits": [
+        { "dir": "up", "to": "r10" },
+        { "dir": "left", "to": "r01" },
+        { "dir": "right", "to": "r21", "requires_key": true },
+        { "dir": "down", "to": "r12" }
+      ]
+    },
+    {
+      "id": "r21",
+      "name": "锁印宝库",
+      "type": "chest",
+      "x": 2,
+      "y": 1,
+      "enemy_count": 1,
+      "enemy_types": ["shooter"],
+      "key_reward": 0,
+      "big_reward": { "atk": 2, "def": 1, "fate": 2, "hp": 6 },
+      "exits": [
+        { "dir": "left", "to": "r11", "requires_key": true },
+        { "dir": "up", "to": "r20" },
+        { "dir": "down", "to": "r22" }
+      ]
+    },
+    {
+      "id": "r02",
+      "name": "残钟角落",
+      "type": "battle",
+      "x": 0,
+      "y": 2,
+      "enemy_count": 2,
+      "key_reward": 1,
+      "exits": [
+        { "dir": "up", "to": "r01" },
+        { "dir": "right", "to": "r12" }
+      ]
+    },
+    {
+      "id": "r12",
+      "name": "静谧祈福室",
+      "type": "prayer",
+      "deity_name": "妮拉神像",
+      "x": 1,
+      "y": 2,
+      "enemy_count": 1,
+      "key_reward": 0,
+      "prayer_pool": [
+        { "label": "生命赐福", "effect": { "hp": 5 } },
+        { "label": "钥匙赐福", "effect": { "keys": 1 } },
+        { "label": "净化赐福", "effect": { "corruption": -2, "fate": 1 } }
+      ],
+      "exits": [
+        { "dir": "up", "to": "r11" },
+        { "dir": "left", "to": "r02" },
+        { "dir": "right", "to": "r22" }
+      ]
+    },
+    {
+      "id": "r22",
+      "name": "终局斗场",
+      "type": "battle",
+      "x": 2,
+      "y": 2,
+      "enemy_count": 3,
+      "enemy_types": ["chaser", "shooter", "shooter"],
+      "key_reward": 0,
+      "exits": [
+        { "dir": "left", "to": "r12" },
+        { "dir": "up", "to": "r21" }
+      ]
+    }
+  ]
+}

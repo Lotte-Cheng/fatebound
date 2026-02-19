@@ -1,0 +1,130 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/dungeon/dungeon_run.gd" id="1_script"]
+
+[node name="DungeonRun" type="Node2D"]
+script = ExtResource("1_script")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="HudPanel" type="PanelContainer" parent="CanvasLayer"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 350.0
+offset_bottom = 880.0
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/HudPanel"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="TitleLabel" type="Label" parent="CanvasLayer/HudPanel/VBox"]
+layout_mode = 2
+text = "Fatebound Action Dungeon"
+
+[node name="StatsLabel" type="Label" parent="CanvasLayer/HudPanel/VBox"]
+layout_mode = 2
+text = "HP 0 | ATK 0 | DEF 0 | Keys 0"
+
+[node name="RoomLabel" type="Label" parent="CanvasLayer/HudPanel/VBox"]
+layout_mode = 2
+text = "Room"
+
+[node name="HintLabel" type="Label" parent="CanvasLayer/HudPanel/VBox"]
+layout_mode = 2
+autowrap_mode = 3
+text = "WASD移动，左键射击，清房后穿过门选择路径。"
+
+[node name="MarkerLegendLabel" type="Label" parent="CanvasLayer/HudPanel/VBox"]
+layout_mode = 2
+autowrap_mode = 3
+text = "标识：怪(红) | 远(橙) | 门(绿) | 锁(橙) | 钥(黄) | 神像(蓝)"
+
+[node name="PrayButton" type="Button" parent="CanvasLayer/HudPanel/VBox"]
+layout_mode = 2
+text = "自动请求并祈祷"
+visible = false
+
+[node name="PrayerPanel" type="VBoxContainer" parent="CanvasLayer/HudPanel/VBox"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="PrayerTitle" type="Label" parent="CanvasLayer/HudPanel/VBox/PrayerPanel"]
+layout_mode = 2
+text = "祝福神像"
+
+[node name="PrayerRequestInput" type="LineEdit" parent="CanvasLayer/HudPanel/VBox/PrayerPanel"]
+layout_mode = 2
+placeholder_text = "输入请求（例如：赐我力量、请给钥匙、治疗我）"
+
+[node name="PrayerButtonRow" type="HBoxContainer" parent="CanvasLayer/HudPanel/VBox/PrayerPanel"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="AutoRequestButton" type="Button" parent="CanvasLayer/HudPanel/VBox/PrayerPanel/PrayerButtonRow"]
+layout_mode = 2
+text = "自动生成请求"
+
+[node name="AskStatueButton" type="Button" parent="CanvasLayer/HudPanel/VBox/PrayerPanel/PrayerButtonRow"]
+layout_mode = 2
+text = "按请求祈祷"
+
+[node name="OptionTitle" type="Label" parent="CanvasLayer/HudPanel/VBox/PrayerPanel"]
+layout_mode = 2
+text = "或直接选择祝福："
+
+[node name="BlessOptionA" type="Button" parent="CanvasLayer/HudPanel/VBox/PrayerPanel"]
+layout_mode = 2
+text = "祝福 A"
+
+[node name="BlessOptionB" type="Button" parent="CanvasLayer/HudPanel/VBox/PrayerPanel"]
+layout_mode = 2
+text = "祝福 B"
+
+[node name="BlessOptionC" type="Button" parent="CanvasLayer/HudPanel/VBox/PrayerPanel"]
+layout_mode = 2
+text = "祝福 C"
+
+[node name="DeityResponseTitle" type="Label" parent="CanvasLayer/HudPanel/VBox/PrayerPanel"]
+layout_mode = 2
+text = "神像回应"
+
+[node name="DeityResponseOutput" type="RichTextLabel" parent="CanvasLayer/HudPanel/VBox/PrayerPanel"]
+custom_minimum_size = Vector2(0, 84)
+layout_mode = 2
+scroll_active = true
+selection_enabled = true
+
+[node name="RestartButton" type="Button" parent="CanvasLayer/HudPanel/VBox"]
+layout_mode = 2
+text = "重开本局"
+
+[node name="MapTitle" type="Label" parent="CanvasLayer/HudPanel/VBox"]
+layout_mode = 2
+text = "小地图（探索点亮）"
+
+[node name="MinimapGrid" type="GridContainer" parent="CanvasLayer/HudPanel/VBox"]
+layout_mode = 2
+columns = 3
+theme_override_constants/h_separation = 4
+theme_override_constants/v_separation = 4
+
+[node name="AdjacentPreviewTitle" type="Label" parent="CanvasLayer/HudPanel/VBox"]
+layout_mode = 2
+text = "相邻房间预判"
+
+[node name="AdjacentPreviewLabel" type="Label" parent="CanvasLayer/HudPanel/VBox"]
+layout_mode = 2
+autowrap_mode = 3
+text = "上: ? | 右: ? | 下: ? | 左: ?"
+
+[node name="LogTitle" type="Label" parent="CanvasLayer/HudPanel/VBox"]
+layout_mode = 2
+text = "事件日志"
+
+[node name="LogOutput" type="RichTextLabel" parent="CanvasLayer/HudPanel/VBox"]
+custom_minimum_size = Vector2(0, 360)
+layout_mode = 2
+size_flags_vertical = 3
+scroll_active = true
+selection_enabled = true
