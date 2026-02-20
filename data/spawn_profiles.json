@@ -1,0 +1,89 @@
+{
+  "profiles": {
+    "battle_tutorial": {
+      "spawn_interval": 1.35,
+      "min_interval": 0.9,
+      "ramp_per_sec": 0.004,
+      "max_enemies": 3,
+      "enemy_hp_mult": 1.00,
+      "enemy_atk_mult": 1.00,
+      "enemy_speed_mult": 1.00,
+      "xp_per_kill": 1,
+      "elite_hp_mult": 1.9,
+      "elite_xp": 2,
+      "mix": [
+        { "kind": "chaser", "weight": 85 },
+        { "kind": "shooter", "weight": 15 }
+      ],
+      "elite_spawn_at_sec": []
+    },
+    "battle_stage_1": {
+      "spawn_interval": 1.32,
+      "min_interval": 0.78,
+      "ramp_per_sec": 0.008,
+      "max_enemies": 12,
+      "enemy_hp_mult": 1.06,
+      "enemy_atk_mult": 1.05,
+      "enemy_speed_mult": 1.03,
+      "xp_per_kill": 1,
+      "elite_hp_mult": 2.1,
+      "elite_xp": 3,
+      "mix": [
+        { "kind": "chaser", "weight": 72 },
+        { "kind": "shooter", "weight": 28 }
+      ],
+      "elite_spawn_at_sec": [38]
+    },
+    "battle_stage_2": {
+      "spawn_interval": 1.16,
+      "min_interval": 0.66,
+      "ramp_per_sec": 0.010,
+      "max_enemies": 15,
+      "enemy_hp_mult": 1.16,
+      "enemy_atk_mult": 1.12,
+      "enemy_speed_mult": 1.06,
+      "xp_per_kill": 1,
+      "elite_hp_mult": 2.25,
+      "elite_xp": 3,
+      "mix": [
+        { "kind": "chaser", "weight": 62 },
+        { "kind": "shooter", "weight": 38 }
+      ],
+      "elite_spawn_at_sec": [30]
+    },
+    "battle_stage_3": {
+      "spawn_interval": 1.02,
+      "min_interval": 0.56,
+      "ramp_per_sec": 0.012,
+      "max_enemies": 18,
+      "enemy_hp_mult": 1.28,
+      "enemy_atk_mult": 1.20,
+      "enemy_speed_mult": 1.09,
+      "xp_per_kill": 1,
+      "elite_hp_mult": 2.4,
+      "elite_xp": 4,
+      "mix": [
+        { "kind": "chaser", "weight": 55 },
+        { "kind": "shooter", "weight": 45 }
+      ],
+      "elite_spawn_at_sec": [26, 48]
+    },
+    "battle_final": {
+      "spawn_interval": 0.88,
+      "min_interval": 0.44,
+      "ramp_per_sec": 0.014,
+      "max_enemies": 22,
+      "enemy_hp_mult": 1.42,
+      "enemy_atk_mult": 1.35,
+      "enemy_speed_mult": 1.12,
+      "xp_per_kill": 1,
+      "elite_hp_mult": 2.6,
+      "elite_xp": 5,
+      "mix": [
+        { "kind": "chaser", "weight": 48 },
+        { "kind": "shooter", "weight": 52 }
+      ],
+      "elite_spawn_at_sec": [20, 38, 56]
+    }
+  }
+}

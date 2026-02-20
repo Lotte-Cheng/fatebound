@@ -95,6 +95,27 @@ layout_mode = 2
 scroll_active = true
 selection_enabled = true
 
+[node name="LevelUpPanel" type="VBoxContainer" parent="CanvasLayer/HudPanel/VBox"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="LevelUpTitle" type="Label" parent="CanvasLayer/HudPanel/VBox/LevelUpPanel"]
+layout_mode = 2
+text = "升级选择（3选1）"
+
+[node name="BuildOptionA" type="Button" parent="CanvasLayer/HudPanel/VBox/LevelUpPanel"]
+layout_mode = 2
+text = "构筑 A"
+
+[node name="BuildOptionB" type="Button" parent="CanvasLayer/HudPanel/VBox/LevelUpPanel"]
+layout_mode = 2
+text = "构筑 B"
+
+[node name="BuildOptionC" type="Button" parent="CanvasLayer/HudPanel/VBox/LevelUpPanel"]
+layout_mode = 2
+text = "构筑 C"
+
 [node name="RestartButton" type="Button" parent="CanvasLayer/HudPanel/VBox"]
 layout_mode = 2
 text = "重开本局"

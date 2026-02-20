@@ -2,6 +2,8 @@ extends Node2D
 
 const DataLoaderScript = preload("res://scripts/data_loader.gd")
 const DUNGEON_PATH := "res://data/dungeon_layout.json"
+const SPAWN_PROFILES_PATH := "res://data/spawn_profiles.json"
+const BUILD_NODES_PATH := "res://data/build_nodes.json"
 
 const PLAYER_RADIUS := 14.0
 const ENEMY_RADIUS := 14.0
@@ -15,6 +17,13 @@ const ENEMY_MIN_PLAYER_DIST := 170.0
 const ENEMY_MIN_ENEMY_DIST := ENEMY_RADIUS * 2.6
 const ENEMY_SPAWN_ATTEMPTS := 28
 const STATUE_INTERACT_RADIUS := 96.0
+const BASE_SHOT_COOLDOWN := 0.2
+const LEVELUP_OPTION_COUNT := 3
+const TUTORIAL_MOVE_DISTANCE := 110.0
+const TUTORIAL_SHOTS_REQUIRED := 3
+const GUIDE_ARROW_LENGTH := 56.0
+const GUIDE_ARROW_HEAD := 14.0
+const GUIDE_ARROW_WOBBLE := 10.0
 
 @onready var _hud_panel: PanelContainer = $CanvasLayer/HudPanel
 @onready var _stats_label: Label = $CanvasLayer/HudPanel/VBox/StatsLabel
@@ -30,6 +39,10 @@ const STATUE_INTERACT_RADIUS := 96.0
 @onready var _bless_option_b: Button = $CanvasLayer/HudPanel/VBox/PrayerPanel/BlessOptionB
 @onready var _bless_option_c: Button = $CanvasLayer/HudPanel/VBox/PrayerPanel/BlessOptionC
 @onready var _deity_response_output: RichTextLabel = $CanvasLayer/HudPanel/VBox/PrayerPanel/DeityResponseOutput
+@onready var _levelup_panel: VBoxContainer = $CanvasLayer/HudPanel/VBox/LevelUpPanel
+@onready var _build_option_a: Button = $CanvasLayer/HudPanel/VBox/LevelUpPanel/BuildOptionA
+@onready var _build_option_b: Button = $CanvasLayer/HudPanel/VBox/LevelUpPanel/BuildOptionB
+@onready var _build_option_c: Button = $CanvasLayer/HudPanel/VBox/LevelUpPanel/BuildOptionC
 @onready var _restart_button: Button = $CanvasLayer/HudPanel/VBox/RestartButton
 @onready var _minimap_grid: GridContainer = $CanvasLayer/HudPanel/VBox/MinimapGrid
 @onready var _adjacent_preview_label: Label = $CanvasLayer/HudPanel/VBox/AdjacentPreviewLabel
@@ -44,12 +57,42 @@ var _start_room_id := ""
 var _map_cols := 3
 var _map_rows := 3
 var _minimap_cells: Dictionary = {}
+var _spawn_profiles: Dictionary = {}
+var _build_nodes_catalog: Array[Dictionary] = []
 
 var _player_state: Dictionary = {}
 var _player_pos := Vector2.ZERO
 var _bullets: Array[Dictionary] = []
 var _enemy_projectiles: Array[Dictionary] = []
 var _enemies: Array[Dictionary] = []
+var _battle_is_survival := false
+var _battle_timer_total := 0.0
+var _battle_timer_remaining := 0.0
+var _battle_spawn_profile: Dictionary = {}
+var _battle_spawn_cd := 0.0
+var _battle_next_elite_index := 0
+var _battle_timeout_announced := false
+var _battle_spawn_total_limit := 0
+var _battle_spawned_total := 0
+var _battle_spawn_finished := false
+var _run_level := 1
+var _run_xp := 0
+var _run_xp_to_next := 6
+var _build_modifiers := {
+	"fire_rate_mult": 1.0,
+	"projectile_bonus": 0,
+	"move_speed_bonus": 0.0,
+	"damage_reduction": 0,
+	"bullet_damage_bonus": 0
+}
+var _owned_build_stacks: Dictionary = {}
+var _levelup_pending := false
+var _levelup_options: Array[Dictionary] = []
+var _tutorial_spawn_pos := Vector2.ZERO
+var _tutorial_move_done := false
+var _tutorial_shots_fired := 0
+var _tutorial_kills := 0
+var _tutorial_step_announced := -1
 
 var _visited: Dictionary = {}
 var _cleared: Dictionary = {}
@@ -74,6 +117,9 @@ func _ready() -> void:
 	_bless_option_a.pressed.connect(func() -> void: _on_bless_option_pressed(0))
 	_bless_option_b.pressed.connect(func() -> void: _on_bless_option_pressed(1))
 	_bless_option_c.pressed.connect(func() -> void: _on_bless_option_pressed(2))
+	_build_option_a.pressed.connect(func() -> void: _on_build_option_pressed(0))
+	_build_option_b.pressed.connect(func() -> void: _on_build_option_pressed(1))
+	_build_option_c.pressed.connect(func() -> void: _on_build_option_pressed(2))
 	_restart_button.pressed.connect(_on_restart_pressed)
 	_boot_new_run()
 
@@ -97,6 +143,12 @@ func _boot_new_run() -> void:
 	_enemies.clear()
 	_logs.clear()
 	_deity_response_output.text = ""
+	_levelup_options.clear()
+	_levelup_pending = false
+	_reset_battle_room_runtime()
+	_reset_build_runtime()
+	_reset_tutorial_runtime()
+	_load_runtime_configs()
 
 	_map_cols = int((cfg.get("grid", {}) as Dictionary).get("cols", 3))
 	_map_rows = int((cfg.get("grid", {}) as Dictionary).get("rows", 3))
@@ -140,6 +192,95 @@ func _boot_new_run() -> void:
 	_update_ui()
 	queue_redraw()
 
+func _load_runtime_configs() -> void:
+	var spawn_cfg: Dictionary = DataLoaderScript.load_json(SPAWN_PROFILES_PATH)
+	_spawn_profiles = (spawn_cfg.get("profiles", {}) as Dictionary).duplicate(true)
+	if _spawn_profiles.is_empty():
+		_spawn_profiles["battle_default"] = _default_spawn_profile()
+
+	var build_cfg: Dictionary = DataLoaderScript.load_json(BUILD_NODES_PATH)
+	_build_nodes_catalog.clear()
+	for node_variant in build_cfg.get("nodes", []):
+		var node: Dictionary = node_variant
+		if String(node.get("id", "")).is_empty():
+			continue
+		_build_nodes_catalog.append(node)
+	if _build_nodes_catalog.is_empty():
+		_build_nodes_catalog = _default_build_nodes()
+
+func _default_spawn_profile() -> Dictionary:
+	return {
+		"spawn_interval": 1.2,
+		"min_interval": 0.55,
+		"ramp_per_sec": 0.01,
+		"max_enemies": 16,
+		"mix": [
+			{"kind": "chaser", "weight": 70},
+			{"kind": "shooter", "weight": 30}
+		],
+		"elite_spawn_at_sec": [38]
+	}
+
+func _default_build_nodes() -> Array[Dictionary]:
+	return [
+		{
+			"id": "fallback_damage",
+			"label": "战意注入",
+			"description": "攻击 +1",
+			"weight": 1.0,
+			"max_stack": 3,
+			"effect": {"atk": 1}
+		},
+		{
+			"id": "fallback_guard",
+			"label": "守护注入",
+			"description": "防御 +1",
+			"weight": 1.0,
+			"max_stack": 3,
+			"effect": {"def": 1}
+		},
+		{
+			"id": "fallback_life",
+			"label": "命脉注入",
+			"description": "生命 +4",
+			"weight": 1.0,
+			"max_stack": 2,
+			"effect": {"hp": 4}
+		}
+	]
+
+func _reset_battle_room_runtime() -> void:
+	_battle_is_survival = false
+	_battle_timer_total = 0.0
+	_battle_timer_remaining = 0.0
+	_battle_spawn_profile.clear()
+	_battle_spawn_cd = 0.0
+	_battle_next_elite_index = 0
+	_battle_timeout_announced = false
+	_battle_spawn_total_limit = 0
+	_battle_spawned_total = 0
+	_battle_spawn_finished = false
+
+func _reset_build_runtime() -> void:
+	_run_level = 1
+	_run_xp = 0
+	_run_xp_to_next = 6
+	_owned_build_stacks.clear()
+	_build_modifiers = {
+		"fire_rate_mult": 1.0,
+		"projectile_bonus": 0,
+		"move_speed_bonus": 0.0,
+		"damage_reduction": 0,
+		"bullet_damage_bonus": 0
+	}
+
+func _reset_tutorial_runtime() -> void:
+	_tutorial_spawn_pos = Vector2.ZERO
+	_tutorial_move_done = false
+	_tutorial_shots_fired = 0
+	_tutorial_kills = 0
+	_tutorial_step_announced = -1
+
 func _process(delta: float) -> void:
 	_shoot_cooldown = maxf(0.0, _shoot_cooldown - delta)
 	_touch_hit_cooldown = maxf(0.0, _touch_hit_cooldown - delta)
@@ -150,12 +291,19 @@ func _process(delta: float) -> void:
 		queue_redraw()
 		return
 
+	if _levelup_pending:
+		_update_ui()
+		queue_redraw()
+		return
+
 	_move_player(delta)
 	_update_bullets(delta)
 	_update_enemy_projectiles(delta)
 	_update_enemies(delta)
+	_update_survival_room(delta)
+	_sync_tutorial_step_log()
 
-	if _enemies.is_empty() and not bool(_cleared.get(_current_room_id, false)):
+	if _should_clear_current_room() and not bool(_cleared.get(_current_room_id, false)):
 		_on_room_cleared()
 
 	_try_room_transition()
@@ -163,9 +311,21 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 func _input(event: InputEvent) -> void:
+	if _levelup_pending and event is InputEventKey:
+		var key_event: InputEventKey = event
+		if key_event.pressed and not key_event.echo:
+			if key_event.keycode == KEY_1:
+				_on_build_option_pressed(0)
+				return
+			if key_event.keycode == KEY_2:
+				_on_build_option_pressed(1)
+				return
+			if key_event.keycode == KEY_3:
+				_on_build_option_pressed(2)
+				return
 	if event is InputEventMouseButton:
 		var mb: InputEventMouseButton = event
-		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed and not _game_over and not _is_prayer_input_active():
+		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed and not _game_over and not _is_game_input_locked():
 			_try_fire(mb.position)
 
 func _draw() -> void:
@@ -176,6 +336,10 @@ func _draw() -> void:
 	var room := _current_room()
 	var room_cleared := bool(_cleared.get(_current_room_id, false))
 	_draw_world_text(rect.position + Vector2(8, 20), "房间:%s" % String(room.get("type", "unknown")), Color(0.82, 0.86, 0.92))
+	if _is_tutorial_active():
+		_draw_tutorial_world_guidance(rect)
+	if _battle_is_survival and not room_cleared:
+		_draw_world_text(rect.position + Vector2(8, 40), "生存倒计时: %.1fs" % _battle_timer_remaining, Color(0.96, 0.84, 0.42))
 	for exit_variant in room.get("exits", []):
 		var exit_cfg: Dictionary = exit_variant
 		var door_rect := _door_rect(String(exit_cfg.get("dir", "")))
@@ -215,9 +379,15 @@ func _draw() -> void:
 		var enemy: Dictionary = enemy_variant
 		var color := Color(0.92, 0.28, 0.28)
 		var marker := "怪"
+		if bool(enemy.get("elite", false)):
+			color = Color(0.9, 0.22, 0.74)
+			marker = "精"
 		if String(enemy.get("kind", "chaser")) == "shooter":
 			color = Color(0.95, 0.55, 0.3)
 			marker = "远"
+			if bool(enemy.get("elite", false)):
+				color = Color(0.95, 0.45, 0.8)
+				marker = "精远"
 		draw_circle(enemy.get("pos", Vector2.ZERO), ENEMY_RADIUS, color)
 		_draw_world_text(enemy.get("pos", Vector2.ZERO) + Vector2(-9, -18), marker, Color(1.0, 1.0, 1.0))
 
@@ -225,7 +395,7 @@ func _draw() -> void:
 	_draw_world_text(_player_pos + Vector2(-10, -18), "你", Color(0.85, 1.0, 0.88))
 
 func _move_player(delta: float) -> void:
-	if _is_prayer_input_active():
+	if _is_game_input_locked():
 		return
 	var axis := Vector2.ZERO
 	if Input.is_physical_key_pressed(KEY_A) or Input.is_physical_key_pressed(KEY_LEFT):
@@ -238,26 +408,39 @@ func _move_player(delta: float) -> void:
 		axis.y += 1.0
 	axis = axis.normalized()
 
-	_player_pos += axis * PLAYER_SPEED * delta
+	var speed := PLAYER_SPEED + float(_build_modifiers.get("move_speed_bonus", 0.0))
+	_player_pos += axis * speed * delta
 	var rect := _play_rect()
 	_player_pos.x = clampf(_player_pos.x, rect.position.x + PLAYER_RADIUS, rect.end.x - PLAYER_RADIUS)
 	_player_pos.y = clampf(_player_pos.y, rect.position.y + PLAYER_RADIUS, rect.end.y - PLAYER_RADIUS)
+	if _is_tutorial_active() and not _tutorial_move_done:
+		_tutorial_move_done = _player_pos.distance_to(_tutorial_spawn_pos) >= TUTORIAL_MOVE_DISTANCE
 
 func _try_fire(target_pos: Vector2) -> void:
 	if _shoot_cooldown > 0.0:
 		return
-	_shoot_cooldown = 0.2
 
 	var dir := (target_pos - _player_pos).normalized()
 	if dir == Vector2.ZERO:
 		return
-	var damage := maxi(1, int(_player_state.get("atk", 1)))
-	_bullets.append({
-		"pos": _player_pos,
-		"vel": dir * BULLET_SPEED,
-		"ttl": 1.1,
-		"damage": damage
-	})
+	var fire_rate_mult := maxf(0.35, float(_build_modifiers.get("fire_rate_mult", 1.0)))
+	_shoot_cooldown = maxf(0.06, BASE_SHOT_COOLDOWN / fire_rate_mult)
+	if _is_tutorial_active() and _tutorial_move_done and _tutorial_shots_fired < TUTORIAL_SHOTS_REQUIRED:
+		_tutorial_shots_fired += 1
+
+	var damage := maxi(1, int(_player_state.get("atk", 1)) + int(_build_modifiers.get("bullet_damage_bonus", 0)))
+	var projectile_count := maxi(1, 1 + int(_build_modifiers.get("projectile_bonus", 0)))
+	var center := (projectile_count - 1) * 0.5
+	var spread_step := deg_to_rad(10.0)
+	for i in range(projectile_count):
+		var angle_offset := (float(i) - center) * spread_step
+		var shot_dir := dir.rotated(angle_offset)
+		_bullets.append({
+			"pos": _player_pos,
+			"vel": shot_dir * BULLET_SPEED,
+			"ttl": 1.1,
+			"damage": damage
+		})
 
 func _update_bullets(delta: float) -> void:
 	var alive: Array[Dictionary] = []
@@ -277,6 +460,7 @@ func _update_bullets(delta: float) -> void:
 				_enemies[i] = enemy
 				hit = true
 				if hp <= 0:
+					_on_enemy_defeated(enemy)
 					_enemies.remove_at(i)
 				break
 		if hit:
@@ -347,7 +531,7 @@ func _update_enemies(delta: float) -> void:
 func _try_room_transition() -> void:
 	if _door_cooldown > 0.0:
 		return
-	if not _enemies.is_empty():
+	if not bool(_cleared.get(_current_room_id, false)):
 		return
 
 	var room := _current_room()
@@ -380,7 +564,19 @@ func _enter_room(room_id: String, spawn_from_dir: String) -> void:
 	_visited[room_id] = true
 	_prayer_request_input.clear()
 	_deity_response_output.text = ""
+	_levelup_options.clear()
+	_levelup_pending = false
+	_reset_battle_room_runtime()
 	_place_player(spawn_from_dir)
+	if _is_tutorial_upgrade_room() and not bool(_cleared.get(_current_room_id, false)):
+		_tutorial_spawn_pos = _player_pos
+		_tutorial_move_done = false
+		_tutorial_shots_fired = 0
+		_tutorial_kills = 0
+		_tutorial_step_announced = -1
+		_append_log("教学开始：1) WASD移动离开光圈 2) 左键开火3次 3) 击败怪物升级 4) 选择1个构筑。")
+	else:
+		_reset_tutorial_runtime()
 	_spawn_room_entities()
 	_update_minimap()
 	_append_log("进入房间：%s" % String(_current_room().get("name", room_id)))
@@ -394,27 +590,171 @@ func _spawn_room_entities() -> void:
 	if bool(_cleared.get(_current_room_id, false)):
 		return
 
+	if String(room.get("type", "")) == "battle":
+		_start_battle_room_runtime(room)
+		var initial_count := int(room.get("enemy_count", 2))
+		if _battle_spawn_total_limit > 0:
+			initial_count = mini(initial_count, _battle_spawn_total_limit)
+		var enemy_types: Array = room.get("enemy_types", [])
+		for i in range(initial_count):
+			var kind := ""
+			if i < enemy_types.size():
+				kind = String(enemy_types[i])
+			if kind.is_empty():
+				kind = _pick_enemy_kind(_battle_spawn_profile)
+			if not _spawn_enemy(kind, false):
+				break
+		return
+
 	var enemy_count := int(room.get("enemy_count", 0))
 	var enemy_types: Array = room.get("enemy_types", [])
-	var spawned_positions: Array = []
 	for i in range(enemy_count):
 		var kind := "chaser"
 		if i < enemy_types.size():
 			kind = String(enemy_types[i])
-		var pos := _sample_enemy_spawn(spawned_positions)
-		spawned_positions.append(pos)
-		var enemy := {
-			"pos": pos,
-			"kind": kind,
-			"hp": 4 if kind == "chaser" else 3,
-			"atk": 2 if kind == "chaser" else 1,
-			"speed": 105.0 if kind == "chaser" else 85.0,
-			"shoot_cd": 0.8 + _rng.randf() * 0.5
-		}
-		_enemies.append(enemy)
+		_spawn_enemy(kind, false)
 
 	if enemy_count == 0:
 		_on_room_cleared()
+
+func _start_battle_room_runtime(room: Dictionary) -> void:
+	_battle_is_survival = true
+	_battle_timer_total = maxf(20.0, float(room.get("room_timer_sec", 50.0)))
+	_battle_timer_remaining = _battle_timer_total
+	_battle_timeout_announced = false
+	_battle_next_elite_index = 0
+	_battle_spawn_total_limit = maxi(1, int(room.get("spawn_total_limit", 26)))
+	_battle_spawned_total = 0
+	_battle_spawn_finished = false
+	var profile_id := String(room.get("spawn_profile_id", "battle_default"))
+	_battle_spawn_profile = (_spawn_profiles.get(profile_id, _default_spawn_profile()) as Dictionary).duplicate(true)
+	if room.has("enemy_hp_mult"):
+		_battle_spawn_profile["enemy_hp_mult"] = float(room.get("enemy_hp_mult", 1.0))
+	if room.has("enemy_atk_mult"):
+		_battle_spawn_profile["enemy_atk_mult"] = float(room.get("enemy_atk_mult", 1.0))
+	if room.has("enemy_speed_mult"):
+		_battle_spawn_profile["enemy_speed_mult"] = float(room.get("enemy_speed_mult", 1.0))
+	if room.has("elite_hp_mult"):
+		_battle_spawn_profile["elite_hp_mult"] = float(room.get("elite_hp_mult", 2.2))
+	if room.has("elite_xp"):
+		_battle_spawn_profile["elite_xp"] = int(room.get("elite_xp", 3))
+	_battle_spawn_cd = 0.35
+
+func _update_survival_room(delta: float) -> void:
+	if not _battle_is_survival:
+		return
+	if bool(_cleared.get(_current_room_id, false)):
+		return
+	if _battle_spawn_finished:
+		return
+	if _is_tutorial_active() and not _is_tutorial_spawn_unlocked():
+		return
+
+	_battle_timer_remaining = maxf(0.0, _battle_timer_remaining - delta)
+	if _battle_timer_remaining <= 0.0:
+		if not _battle_timeout_announced:
+			_battle_timeout_announced = true
+			_append_log("生存倒计时结束：清理剩余敌人后可离开本房间。")
+		_battle_spawn_finished = true
+		return
+
+	_battle_spawn_cd -= delta
+	var loop_guard := 0
+	while _battle_spawn_cd <= 0.0 and loop_guard < 8:
+		_spawn_survival_enemy()
+		_battle_spawn_cd += _current_spawn_interval()
+		loop_guard += 1
+
+func _spawn_survival_enemy() -> void:
+	if _battle_spawn_total_limit > 0 and _battle_spawned_total >= _battle_spawn_total_limit:
+		_battle_spawn_finished = true
+		return
+	var max_enemies := int(_battle_spawn_profile.get("max_enemies", 16))
+	if _enemies.size() >= max_enemies:
+		return
+
+	var elapsed := _battle_timer_total - _battle_timer_remaining
+	var elite_schedule: Array = _battle_spawn_profile.get("elite_spawn_at_sec", [])
+	var spawn_elite := false
+	if _battle_next_elite_index < elite_schedule.size():
+		if elapsed >= float(elite_schedule[_battle_next_elite_index]):
+			spawn_elite = true
+			_battle_next_elite_index += 1
+
+	var kind := _pick_enemy_kind(_battle_spawn_profile)
+	_spawn_enemy(kind, spawn_elite)
+
+func _pick_enemy_kind(profile: Dictionary) -> String:
+	var mix: Array = profile.get("mix", [])
+	if mix.is_empty():
+		return "chaser"
+
+	var total := 0.0
+	for item_variant in mix:
+		var item: Dictionary = item_variant
+		total += maxf(0.01, float(item.get("weight", 1.0)))
+
+	var roll := _rng.randf_range(0.0, total)
+	var cursor := 0.0
+	for item_variant in mix:
+		var item: Dictionary = item_variant
+		cursor += maxf(0.01, float(item.get("weight", 1.0)))
+		if roll <= cursor:
+			return String(item.get("kind", "chaser"))
+	return String((mix.back() as Dictionary).get("kind", "chaser"))
+
+func _current_spawn_interval() -> float:
+	var base := float(_battle_spawn_profile.get("spawn_interval", 1.2))
+	var min_interval := float(_battle_spawn_profile.get("min_interval", 0.55))
+	var ramp := float(_battle_spawn_profile.get("ramp_per_sec", 0.01))
+	var elapsed := _battle_timer_total - _battle_timer_remaining
+	return maxf(min_interval, base - elapsed * ramp)
+
+func _spawn_enemy(kind: String, elite: bool) -> bool:
+	if _battle_is_survival and _battle_spawn_total_limit > 0 and _battle_spawned_total >= _battle_spawn_total_limit:
+		_battle_spawn_finished = true
+		return false
+	var pos := _sample_enemy_spawn(_enemy_positions())
+	var hp := 4 if kind == "chaser" else 3
+	var atk := 2 if kind == "chaser" else 1
+	var speed := 105.0 if kind == "chaser" else 85.0
+	var hp_mult := float(_battle_spawn_profile.get("enemy_hp_mult", 1.0))
+	var atk_mult := float(_battle_spawn_profile.get("enemy_atk_mult", 1.0))
+	var speed_mult := float(_battle_spawn_profile.get("enemy_speed_mult", 1.0))
+	hp = maxi(1, int(round(float(hp) * hp_mult)))
+	atk = maxi(1, int(round(float(atk) * atk_mult)))
+	speed *= speed_mult
+	var xp := maxi(1, int(_battle_spawn_profile.get("xp_per_kill", 1)))
+	if elite:
+		hp = maxi(1, int(round(float(hp) * float(_battle_spawn_profile.get("elite_hp_mult", 2.2)))))
+		atk += 1
+		speed *= 1.08
+		xp = maxi(2, int(_battle_spawn_profile.get("elite_xp", 3)))
+
+	var enemy := {
+		"pos": pos,
+		"kind": kind,
+		"hp": hp,
+		"atk": atk,
+		"speed": speed,
+		"shoot_cd": 0.8 + _rng.randf() * 0.5,
+		"xp": xp,
+		"elite": elite
+	}
+	_enemies.append(enemy)
+	if _battle_is_survival:
+		_battle_spawned_total += 1
+		if _battle_spawn_total_limit > 0 and _battle_spawned_total >= _battle_spawn_total_limit:
+			_battle_spawn_finished = true
+			_append_log("本房间刷怪达到上限：%d。清空余怪即可结束。" % _battle_spawn_total_limit)
+	return true
+
+func _enemy_positions() -> Array:
+	var points: Array = []
+	for enemy_variant in _enemies:
+		var enemy: Dictionary = enemy_variant
+		points.append(enemy.get("pos", Vector2.ZERO))
+	return points
 
 func _sample_enemy_spawn(existing_positions: Array) -> Vector2:
 	var best_pos := _random_point_in_play_rect(ENEMY_SPAWN_PADDING)
@@ -440,10 +780,170 @@ func _sample_enemy_spawn(existing_positions: Array) -> Vector2:
 			best_pos = candidate
 	return best_pos
 
+func _should_clear_current_room() -> bool:
+	if bool(_cleared.get(_current_room_id, false)):
+		return false
+	if not _enemies.is_empty():
+		return false
+	if _battle_is_survival:
+		return _battle_spawn_finished or _battle_timer_remaining <= 0.0
+	return true
+
+func _on_enemy_defeated(enemy: Dictionary) -> void:
+	if _is_tutorial_active():
+		_tutorial_kills += 1
+	var xp_gain := int(enemy.get("xp", 1))
+	if xp_gain <= 0:
+		return
+	_add_run_xp(xp_gain)
+
+func _add_run_xp(xp_gain: int) -> void:
+	_run_xp += xp_gain
+	while _run_xp >= _run_xp_to_next:
+		_run_xp -= _run_xp_to_next
+		_run_level += 1
+		_run_xp_to_next = maxi(8, int(round(float(_run_xp_to_next) * 1.35)))
+		_offer_levelup_choices()
+
+func _offer_levelup_choices() -> void:
+	var options: Array[Dictionary] = []
+	var room := _current_room()
+	var fixed_ids: Array = room.get("fixed_build_options", [])
+	if not fixed_ids.is_empty():
+		options = _roll_build_options_from_ids(fixed_ids)
+		if not options.is_empty():
+			_append_log("教学升级：本房间提供固定构筑选项。")
+	if options.size() < LEVELUP_OPTION_COUNT:
+		var extra := _roll_build_options(LEVELUP_OPTION_COUNT * 2)
+		for node in extra:
+			var node_id := String(node.get("id", ""))
+			if _has_node_in_options(options, node_id):
+				continue
+			options.append(node)
+			if options.size() >= LEVELUP_OPTION_COUNT:
+				break
+	if options.is_empty():
+		return
+	_levelup_options = options
+	_levelup_pending = true
+	_append_log("等级提升 Lv.%d：请选择 1 个构筑（按 1/2/3 或点击按钮）。" % _run_level)
+
+func _roll_build_options(count: int) -> Array[Dictionary]:
+	var pool: Array[Dictionary] = []
+	for node in _build_nodes_catalog:
+		var node_id := String(node.get("id", ""))
+		if node_id.is_empty():
+			continue
+		var max_stack := maxi(1, int(node.get("max_stack", 1)))
+		var owned_stack := int(_owned_build_stacks.get(node_id, 0))
+		if owned_stack >= max_stack:
+			continue
+		pool.append(node)
+	if pool.is_empty():
+		return []
+
+	var picked: Array[Dictionary] = []
+	while picked.size() < count and not pool.is_empty():
+		var idx := _weighted_node_index(pool)
+		if idx < 0:
+			idx = _rng.randi_range(0, pool.size() - 1)
+		picked.append(pool[idx])
+		pool.remove_at(idx)
+	return picked
+
+func _weighted_node_index(pool: Array[Dictionary]) -> int:
+	var total := 0.0
+	for node in pool:
+		total += maxf(0.01, float(node.get("weight", 1.0)))
+	if total <= 0.0:
+		return -1
+	var roll := _rng.randf_range(0.0, total)
+	var cursor := 0.0
+	for i in range(pool.size()):
+		cursor += maxf(0.01, float(pool[i].get("weight", 1.0)))
+		if roll <= cursor:
+			return i
+	return pool.size() - 1
+
+func _roll_build_options_from_ids(ids: Array) -> Array[Dictionary]:
+	var options: Array[Dictionary] = []
+	for id_variant in ids:
+		var node_id := String(id_variant)
+		if node_id.is_empty():
+			continue
+		var node := _build_node_by_id(node_id)
+		if node.is_empty():
+			continue
+		var max_stack := maxi(1, int(node.get("max_stack", 1)))
+		var owned_stack := int(_owned_build_stacks.get(node_id, 0))
+		if owned_stack >= max_stack:
+			continue
+		options.append(node)
+		if options.size() >= LEVELUP_OPTION_COUNT:
+			break
+	return options
+
+func _build_node_by_id(node_id: String) -> Dictionary:
+	for node_variant in _build_nodes_catalog:
+		var node: Dictionary = node_variant
+		if String(node.get("id", "")) == node_id:
+			return node
+	return {}
+
+func _has_node_in_options(options: Array[Dictionary], node_id: String) -> bool:
+	for node_variant in options:
+		var node: Dictionary = node_variant
+		if String(node.get("id", "")) == node_id:
+			return true
+	return false
+
+func _on_build_option_pressed(index: int) -> void:
+	if not _levelup_pending:
+		return
+	if index < 0 or index >= _levelup_options.size():
+		return
+	var node := _levelup_options[index]
+	_apply_build_node(node)
+	_levelup_options.clear()
+	_levelup_pending = false
+
+func _apply_build_node(node: Dictionary) -> void:
+	var node_id := String(node.get("id", ""))
+	if node_id.is_empty():
+		return
+	_owned_build_stacks[node_id] = int(_owned_build_stacks.get(node_id, 0)) + 1
+
+	var label := String(node.get("label", node_id))
+	var effect: Dictionary = node.get("effect", {})
+	var direct_effect := {}
+	for key_variant in effect.keys():
+		var key := String(key_variant)
+		match key:
+			"fire_rate_mult":
+				_build_modifiers["fire_rate_mult"] = maxf(
+					0.35,
+					float(_build_modifiers.get("fire_rate_mult", 1.0)) + float(effect.get(key, 0.0))
+				)
+			"projectile_bonus":
+				_build_modifiers["projectile_bonus"] = int(_build_modifiers.get("projectile_bonus", 0)) + int(effect.get(key, 0))
+			"move_speed_bonus":
+				_build_modifiers["move_speed_bonus"] = float(_build_modifiers.get("move_speed_bonus", 0.0)) + float(effect.get(key, 0.0))
+			"damage_reduction":
+				_build_modifiers["damage_reduction"] = int(_build_modifiers.get("damage_reduction", 0)) + int(effect.get(key, 0))
+			"bullet_damage_bonus":
+				_build_modifiers["bullet_damage_bonus"] = int(_build_modifiers.get("bullet_damage_bonus", 0)) + int(effect.get(key, 0))
+			_:
+				direct_effect[key] = effect.get(key)
+
+	_append_log("构筑获得：%s（%s）" % [label, String(node.get("description", "无描述"))])
+	if not direct_effect.is_empty():
+		_apply_effect(direct_effect, "构筑：%s" % label)
+
 func _on_room_cleared() -> void:
 	if bool(_cleared.get(_current_room_id, false)):
 		return
 	_cleared[_current_room_id] = true
+	_reset_battle_room_runtime()
 
 	var room := _current_room()
 	var key_reward := int(room.get("key_reward", 0))
@@ -632,7 +1132,8 @@ func _apply_effect(effect: Dictionary, reason: String) -> void:
 
 func _apply_damage_to_player(base_damage: int, reason: String) -> void:
 	var defense := int(_player_state.get("def", 0))
-	var final_damage := maxi(1, base_damage - defense)
+	var reduction := int(_build_modifiers.get("damage_reduction", 0))
+	var final_damage := maxi(1, base_damage - defense - reduction)
 	var hp_before := int(_player_state.get("hp", 0))
 	var hp_after := maxi(0, hp_before - final_damage)
 	_player_state["hp"] = hp_after
@@ -643,24 +1144,49 @@ func _apply_damage_to_player(base_damage: int, reason: String) -> void:
 
 func _update_ui() -> void:
 	var room := _current_room()
-	_stats_label.text = "HP %d | ATK %d | DEF %d | Keys %d | Corruption %d | Fate %d" % [
+	_stats_label.text = "HP %d | ATK %d | DEF %d | Keys %d | Corruption %d | Fate %d | Lv %d XP %d/%d" % [
 		int(_player_state.get("hp", 0)),
 		int(_player_state.get("atk", 0)),
 		int(_player_state.get("def", 0)),
 		int(_player_state.get("keys", 0)),
 		int(_player_state.get("corruption", 0)),
-		int(_player_state.get("fate", 0))
+		int(_player_state.get("fate", 0)),
+		_run_level,
+		_run_xp,
+		_run_xp_to_next
 	]
-	_room_label.text = "房间 %s（%s） | 敌人剩余 %d | 已清空 %s" % [
-		String(room.get("name", _current_room_id)),
-		String(room.get("type", "")),
-		_enemies.size(),
-		"是" if bool(_cleared.get(_current_room_id, false)) else "否"
-	]
+	var room_type := String(room.get("type", ""))
+	var room_cleared := bool(_cleared.get(_current_room_id, false))
+	if room_type == "battle" and _battle_is_survival and not room_cleared:
+		var cap_text := "%d/%d" % [_battle_spawned_total, _battle_spawn_total_limit]
+		_room_label.text = "房间 %s（生存战） | 倒计时 %.1fs | 敌人 %d | 刷怪 %s" % [
+			String(room.get("name", _current_room_id)),
+			_battle_timer_remaining,
+			_enemies.size(),
+			cap_text
+		]
+		if _is_tutorial_active():
+			_room_label.text += " | 教学 %d/4" % min(_tutorial_step_index() + 1, 4)
+	else:
+		_room_label.text = "房间 %s（%s） | 敌人剩余 %d | 已清空 %s" % [
+			String(room.get("name", _current_room_id)),
+			room_type,
+			_enemies.size(),
+			"是" if room_cleared else "否"
+		]
 
 	var hint := "WASD移动，左键射击，清房后穿门选路。"
 	if _game_over:
 		hint = "胜利完成地牢。" if _victory else "你已倒下。点击【重开本局】继续。"
+	elif _levelup_pending:
+		hint = "升级中：请从 3 个构筑中选择 1 个（按 1/2/3 或点击按钮）。"
+	elif _is_tutorial_active():
+		hint = _tutorial_hint_text()
+	elif room_type == "battle" and _battle_is_survival and not room_cleared:
+		if _battle_spawn_finished:
+			hint = "刷怪已完成：清空余怪后即可通关本房间。"
+		else:
+			hint = "生存战进行中：坚持并清怪，刷满上限后结束。"
 	elif not _enemies.is_empty():
 		hint = "当前房间战斗中：清空敌人后门才可通行。"
 	elif _is_prayer_input_active():
@@ -672,12 +1198,21 @@ func _update_ui() -> void:
 			hint = "祈福房已清怪：靠近神像后才能请求。"
 	else:
 		hint = "房间已清空：移动到门口可前往下一个房间。"
+	if _is_tutorial_active():
+		var hint_arrow := ">> " if (int(Time.get_ticks_msec() / 280) % 2) == 0 else "   "
+		hint = hint_arrow + hint
 	_hint_label.text = hint
+	if _is_tutorial_active():
+		var pulse := 0.82 + 0.18 * (0.5 + 0.5 * sin(float(Time.get_ticks_msec()) * 0.012))
+		_hint_label.modulate = Color(1.0, 1.0, 0.92 + pulse * 0.08, 1.0)
+	else:
+		_hint_label.modulate = Color(1, 1, 1, 1)
 
 	_marker_legend_label.text = "标识：怪(追击) | 远(远程) | 门(可通行) | 锁K(双向锁) | 神像(祈福) | 宝箱(大奖励)"
 	_adjacent_preview_label.text = _build_adjacent_preview_text()
 	_pray_button.visible = _can_pray_current_room()
 	_refresh_prayer_panel()
+	_refresh_levelup_panel()
 	_update_minimap()
 	_log_output.text = "\n".join(_logs)
 
@@ -703,6 +1238,139 @@ func _statue_world_pos() -> Vector2:
 
 func _is_prayer_input_active() -> bool:
 	return _prayer_panel.visible and _prayer_request_input.has_focus()
+
+func _is_game_input_locked() -> bool:
+	return _is_prayer_input_active() or _levelup_pending
+
+func _is_tutorial_upgrade_room() -> bool:
+	var room := _current_room()
+	return String(room.get("type", "")) == "battle" and bool(room.get("tutorial_upgrade", false))
+
+func _is_tutorial_active() -> bool:
+	return _is_tutorial_upgrade_room() and not bool(_cleared.get(_current_room_id, false))
+
+func _is_tutorial_spawn_unlocked() -> bool:
+	return not _is_tutorial_active() or (_tutorial_move_done and _tutorial_shots_fired >= TUTORIAL_SHOTS_REQUIRED)
+
+func _tutorial_step_index() -> int:
+	if not _is_tutorial_active():
+		return -1
+	if not _tutorial_move_done:
+		return 0
+	if _tutorial_shots_fired < TUTORIAL_SHOTS_REQUIRED:
+		return 1
+	if _levelup_pending:
+		return 3
+	if _run_level <= 1:
+		return 2
+	return 4
+
+func _tutorial_hint_text() -> String:
+	var step := _tutorial_step_index()
+	match step:
+		0:
+			var moved := int(_player_pos.distance_to(_tutorial_spawn_pos))
+			return "教学1/4：先移动。按WASD离开出生光圈（%d/%d）。" % [moved, int(TUTORIAL_MOVE_DISTANCE)]
+		1:
+			return "教学2/4：左键开火演示（%d/%d）。完成后开始刷怪。" % [_tutorial_shots_fired, TUTORIAL_SHOTS_REQUIRED]
+		2:
+			var remain := maxi(0, _run_xp_to_next - _run_xp)
+			return "教学3/4：击败怪物升级（XP %d/%d，已击败%d，预计还需%d只）。" % [_run_xp, _run_xp_to_next, _tutorial_kills, remain]
+		3:
+			return "教学4/4：从固定构筑中选1个（按1/2/3或点击按钮）。"
+		4:
+			return "教学完成：继续清怪并前往下一房间。"
+		_:
+			return "教学房进行中。"
+
+func _sync_tutorial_step_log() -> void:
+	if not _is_tutorial_active():
+		return
+	var step := _tutorial_step_index()
+	if step == _tutorial_step_announced:
+		return
+	_tutorial_step_announced = step
+	match step:
+		0:
+			_append_log("教学1/4：按WASD移动，离开出生光圈。")
+		1:
+			_append_log("教学2/4：按左键开火3次，完成后开始刷怪。")
+		2:
+			_append_log("教学3/4：击败怪物获取XP，升到Lv2。")
+		3:
+			_append_log("教学4/4：请选择一个构筑升级。")
+		4:
+			_append_log("教学完成：通关本房间后前往下一关。")
+
+func _draw_tutorial_world_guidance(rect: Rect2) -> void:
+	var step := _tutorial_step_index()
+	_draw_world_text(rect.position + Vector2(8, 60), "新手教学 %d/4" % min(step + 1, 4), Color(0.6, 0.86, 1.0))
+	match step:
+		0:
+			draw_arc(_tutorial_spawn_pos, TUTORIAL_MOVE_DISTANCE, 0.0, TAU, 48, Color(0.6, 0.86, 1.0, 0.8), 2.0)
+			_draw_world_text(_tutorial_spawn_pos + Vector2(-86, -26), "离开光圈：WASD移动", Color(0.65, 0.9, 1.0))
+			_draw_guide_arrow(_tutorial_spawn_pos + Vector2(-TUTORIAL_MOVE_DISTANCE * 0.75, 0), Vector2(1.0, 0.0), Color(0.65, 0.9, 1.0), "先移动")
+		1:
+			_draw_world_text(rect.position + Vector2(8, 82), "左键开火 %d/%d（完成后开始刷怪）" % [_tutorial_shots_fired, TUTORIAL_SHOTS_REQUIRED], Color(1.0, 0.92, 0.45))
+			_draw_guide_arrow(_player_pos + Vector2(38, -22), Vector2(-1.0, 0.3), Color(1.0, 0.92, 0.45), "左键开火")
+		2:
+			var remain := maxi(0, _run_xp_to_next - _run_xp)
+			_draw_world_text(rect.position + Vector2(8, 82), "击败怪物升级：XP %d/%d，剩余约%d只" % [_run_xp, _run_xp_to_next, remain], Color(0.85, 1.0, 0.55))
+			var enemy_target := _first_enemy_pos_or_center()
+			_draw_guide_arrow(enemy_target + Vector2(0, -24), Vector2(0.0, 1.0), Color(0.85, 1.0, 0.55), "优先清怪")
+		3:
+			_draw_world_text(rect.position + Vector2(8, 82), "请立刻选择构筑（1/2/3）", Color(1.0, 0.85, 0.48))
+		4:
+			_draw_world_text(rect.position + Vector2(8, 82), "教学已完成，清怪后通过门继续。", Color(0.72, 1.0, 0.72))
+
+func _draw_guide_arrow(tip: Vector2, direction: Vector2, color: Color, label: String = "") -> void:
+	var dir := direction.normalized()
+	if dir == Vector2.ZERO:
+		return
+	var side := Vector2(-dir.y, dir.x)
+	var phase := sin(float(Time.get_ticks_msec()) * 0.01)
+	var wobble := dir * (phase * GUIDE_ARROW_WOBBLE)
+	var animated_tip := tip + wobble
+	var tail := animated_tip - dir * GUIDE_ARROW_LENGTH
+	var head_a := animated_tip - dir * GUIDE_ARROW_HEAD + side * (GUIDE_ARROW_HEAD * 0.55)
+	var head_b := animated_tip - dir * GUIDE_ARROW_HEAD - side * (GUIDE_ARROW_HEAD * 0.55)
+	draw_line(tail, animated_tip, color, 3.0)
+	draw_colored_polygon(PackedVector2Array([animated_tip, head_a, head_b]), color)
+	if not label.is_empty():
+		_draw_world_text(tail + Vector2(-6, -6), label, color)
+
+func _first_enemy_pos_or_center() -> Vector2:
+	if not _enemies.is_empty():
+		var enemy: Dictionary = _enemies[0]
+		return enemy.get("pos", _play_rect().get_center())
+	return _play_rect().get_center()
+
+func _refresh_levelup_panel() -> void:
+	_levelup_panel.visible = _levelup_pending
+	if not _levelup_pending:
+		_levelup_panel.modulate = Color(1, 1, 1, 1)
+		return
+	if _is_tutorial_active():
+		var panel_pulse := 0.78 + 0.22 * (0.5 + 0.5 * sin(float(Time.get_ticks_msec()) * 0.014))
+		_levelup_panel.modulate = Color(1.0, 1.0, 1.0, panel_pulse)
+	else:
+		_levelup_panel.modulate = Color(1, 1, 1, 1)
+	var buttons := [_build_option_a, _build_option_b, _build_option_c]
+	var arrow_prefix := ">> " if (int(Time.get_ticks_msec() / 260) % 2) == 0 else " > "
+	for i in range(buttons.size()):
+		var btn: Button = buttons[i]
+		if i < _levelup_options.size():
+			var node: Dictionary = _levelup_options[i]
+			btn.visible = true
+			var prefix := arrow_prefix if _is_tutorial_active() else ""
+			btn.text = "%s%d) %s - %s" % [
+				prefix,
+				i + 1,
+				String(node.get("label", "构筑")),
+				String(node.get("description", ""))
+			]
+		else:
+			btn.visible = false
 
 func _build_minimap() -> void:
 	for child in _minimap_grid.get_children():
@@ -811,7 +1479,16 @@ func _room_type_display(room_type: String) -> String:
 
 func _play_rect() -> Rect2:
 	var viewport := get_viewport_rect().size
-	return Rect2(370.0, 20.0, viewport.x - 390.0, viewport.y - 40.0)
+	var hud_rect := _hud_panel.get_global_rect()
+	var left := hud_rect.position.x + hud_rect.size.x + 20.0
+	if hud_rect.size.x < 120.0:
+		left = 370.0
+	var top := 20.0
+	var right_margin := 20.0
+	var bottom_margin := 20.0
+	var width := maxf(320.0, viewport.x - left - right_margin)
+	var height := maxf(220.0, viewport.y - top - bottom_margin)
+	return Rect2(left, top, width, height)
 
 func _door_rect(dir: String) -> Rect2:
 	var rect := _play_rect()

@@ -1,5 +1,5 @@
 {
-  "seed": 20260219,
+  "seed": 20260220,
   "start_room_id": "r00",
   "grid": {
     "cols": 3,
@@ -20,11 +20,29 @@
       "type": "start",
       "x": 0,
       "y": 0,
-      "enemy_count": 1,
+      "enemy_count": 0,
       "key_reward": 0,
       "exits": [
-        { "dir": "right", "to": "r10" },
-        { "dir": "down", "to": "r01" }
+        { "dir": "right", "to": "r01" }
+      ]
+    },
+    {
+      "id": "r01",
+      "name": "试炼前厅（升级教学）",
+      "type": "battle",
+      "x": 1,
+      "y": 0,
+      "tutorial_upgrade": true,
+      "fixed_build_options": ["node_blazing_volley", "node_ash_armor", "node_swift_hands"],
+      "room_timer_sec": 50,
+      "spawn_profile_id": "battle_tutorial",
+      "spawn_total_limit": 6,
+      "enemy_count": 0,
+      "enemy_types": [],
+      "key_reward": 0,
+      "exits": [
+        { "dir": "left", "to": "r00" },
+        { "dir": "right", "to": "r10" }
       ]
     },
     {
@@ -32,7 +50,7 @@
       "name": "薄暮祈福室",
       "type": "prayer",
       "deity_name": "索露恩神像",
-      "x": 1,
+      "x": 2,
       "y": 0,
       "enemy_count": 1,
       "key_reward": 0,
@@ -42,82 +60,42 @@
         { "label": "命运赐福", "effect": { "fate": 2 } }
       ],
       "exits": [
-        { "dir": "left", "to": "r00" },
-        { "dir": "right", "to": "r20" },
+        { "dir": "left", "to": "r01" },
         { "dir": "down", "to": "r11" }
       ]
     },
     {
-      "id": "r20",
-      "name": "尖啸战厅",
+      "id": "r11",
+      "name": "裂隙战区",
       "type": "battle",
       "x": 2,
-      "y": 0,
-      "enemy_count": 2,
-      "enemy_types": ["chaser", "shooter"],
-      "key_reward": 1,
-      "exits": [
-        { "dir": "left", "to": "r10" },
-        { "dir": "down", "to": "r21" }
-      ]
-    },
-    {
-      "id": "r01",
-      "name": "裂纹甬道",
-      "type": "battle",
-      "x": 0,
       "y": 1,
-      "enemy_count": 2,
+      "room_timer_sec": 50,
+      "spawn_profile_id": "battle_stage_1",
+      "spawn_total_limit": 20,
+      "enemy_count": 3,
+      "enemy_types": ["chaser", "shooter", "chaser"],
       "key_reward": 1,
-      "exits": [
-        { "dir": "up", "to": "r00" },
-        { "dir": "right", "to": "r11" },
-        { "dir": "down", "to": "r02" }
-      ]
-    },
-    {
-      "id": "r11",
-      "name": "分岔战域",
-      "type": "battle",
-      "x": 1,
-      "y": 1,
-      "enemy_count": 2,
-      "enemy_types": ["chaser", "shooter"],
-      "key_reward": 0,
       "exits": [
         { "dir": "up", "to": "r10" },
-        { "dir": "left", "to": "r01" },
-        { "dir": "right", "to": "r21", "requires_key": true },
-        { "dir": "down", "to": "r12" }
-      ]
-    },
-    {
-      "id": "r21",
-      "name": "锁印宝库",
-      "type": "chest",
-      "x": 2,
-      "y": 1,
-      "enemy_count": 1,
-      "enemy_types": ["shooter"],
-      "key_reward": 0,
-      "big_reward": { "atk": 2, "def": 1, "fate": 2, "hp": 6 },
-      "exits": [
-        { "dir": "left", "to": "r11", "requires_key": true },
-        { "dir": "up", "to": "r20" },
-        { "dir": "down", "to": "r22" }
+        { "dir": "left", "to": "r02" }
       ]
     },
     {
       "id": "r02",
-      "name": "残钟角落",
+      "name": "碎钟走廊",
       "type": "battle",
-      "x": 0,
-      "y": 2,
-      "enemy_count": 2,
-      "key_reward": 1,
+      "x": 1,
+      "y": 1,
+      "room_timer_sec": 56,
+      "spawn_profile_id": "battle_stage_2",
+      "spawn_total_limit": 26,
+      "enemy_count": 3,
+      "enemy_types": ["chaser", "shooter", "shooter"],
+      "key_reward": 0,
       "exits": [
-        { "dir": "up", "to": "r01" },
-        { "dir": "right", "to": "r12" }
+        { "dir": "right", "to": "r11" },
+        { "dir": "left", "to": "r12" }
       ]
     },
     {
@@ -125,8 +103,8 @@
       "name": "静谧祈福室",
       "type": "prayer",
       "deity_name": "妮拉神像",
-      "x": 1,
-      "y": 2,
+      "x": 0,
+      "y": 1,
       "enemy_count": 1,
       "key_reward": 0,
       "prayer_pool": [
@@ -135,8 +113,39 @@
         { "label": "净化赐福", "effect": { "corruption": -2, "fate": 1 } }
       ],
       "exits": [
-        { "dir": "up", "to": "r11" },
-        { "dir": "left", "to": "r02" },
+        { "dir": "right", "to": "r02" },
+        { "dir": "down", "to": "r20" }
+      ]
+    },
+    {
+      "id": "r20",
+      "name": "熔鸣战厅",
+      "type": "battle",
+      "x": 0,
+      "y": 2,
+      "room_timer_sec": 62,
+      "spawn_profile_id": "battle_stage_3",
+      "spawn_total_limit": 32,
+      "enemy_count": 4,
+      "enemy_types": ["chaser", "shooter", "shooter", "chaser"],
+      "key_reward": 0,
+      "exits": [
+        { "dir": "up", "to": "r12" },
+        { "dir": "right", "to": "r21", "requires_key": true }
+      ]
+    },
+    {
+      "id": "r21",
+      "name": "锁印宝库",
+      "type": "chest",
+      "x": 1,
+      "y": 2,
+      "enemy_count": 2,
+      "enemy_types": ["shooter", "chaser"],
+      "key_reward": 0,
+      "big_reward": { "atk": 2, "def": 1, "fate": 2, "hp": 6 },
+      "exits": [
+        { "dir": "left", "to": "r20", "requires_key": true },
         { "dir": "right", "to": "r22" }
       ]
     },
@@ -146,12 +155,14 @@
       "type": "battle",
       "x": 2,
       "y": 2,
-      "enemy_count": 3,
-      "enemy_types": ["chaser", "shooter", "shooter"],
+      "room_timer_sec": 72,
+      "spawn_profile_id": "battle_final",
+      "spawn_total_limit": 44,
+      "enemy_count": 4,
+      "enemy_types": ["chaser", "shooter", "shooter", "shooter"],
       "key_reward": 0,
       "exits": [
-        { "dir": "left", "to": "r12" },
-        { "dir": "up", "to": "r21" }
+        { "dir": "left", "to": "r21" }
       ]
     }
   ]

@@ -1,0 +1,76 @@
+{
+  "nodes": [
+    {
+      "id": "node_blazing_volley",
+      "label": "烈焰弹幕",
+      "description": "额外投射物 +1",
+      "weight": 1.0,
+      "max_stack": 2,
+      "effect": {
+        "projectile_bonus": 1
+      }
+    },
+    {
+      "id": "node_swift_hands",
+      "label": "迅捷施放",
+      "description": "射速提升 +15%",
+      "weight": 1.0,
+      "max_stack": 3,
+      "effect": {
+        "fire_rate_mult": 0.15
+      }
+    },
+    {
+      "id": "node_ash_armor",
+      "label": "灰烬护甲",
+      "description": "受到伤害 -1",
+      "weight": 0.9,
+      "max_stack": 2,
+      "effect": {
+        "damage_reduction": 1
+      }
+    },
+    {
+      "id": "node_steady_stride",
+      "label": "稳步前行",
+      "description": "移动速度 +24",
+      "weight": 0.8,
+      "max_stack": 2,
+      "effect": {
+        "move_speed_bonus": 24
+      }
+    },
+    {
+      "id": "node_hardened_rounds",
+      "label": "穿甲弹芯",
+      "description": "子弹伤害 +1",
+      "weight": 0.95,
+      "max_stack": 3,
+      "effect": {
+        "bullet_damage_bonus": 1
+      }
+    },
+    {
+      "id": "node_blood_spark",
+      "label": "献祭火种",
+      "description": "攻击 +1，但腐化 +1",
+      "weight": 0.7,
+      "max_stack": 2,
+      "effect": {
+        "atk": 1,
+        "corruption": 1
+      }
+    },
+    {
+      "id": "node_fate_well",
+      "label": "命运井",
+      "description": "命运 +1，生命 +2",
+      "weight": 0.7,
+      "max_stack": 2,
+      "effect": {
+        "fate": 1,
+        "hp": 2
+      }
+    }
+  ]
+}
