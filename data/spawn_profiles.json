@@ -1,10 +1,25 @@
 {
+  "global_tuning": {
+    "spawn_interval_scale": 0.82,
+    "enemy_hp_scale": 1.0,
+    "enemy_atk_scale": 1.0,
+    "enemy_speed_scale": 1.0,
+    "xp_gain_scale": 1.0,
+    "xp_orb_pickup_radius": 24.0,
+    "xp_orb_magnet_radius": 186.0,
+    "xp_orb_magnet_speed": 460.0,
+    "xp_orb_lifetime_sec": 26.0,
+    "xp_orb_drift_damp": 5.2,
+    "late_wave_start_sec": 20.0,
+    "late_wave_spawn_rate_mult": 1.6,
+    "late_wave_max_enemies_bonus": 22
+  },
   "profiles": {
     "battle_tutorial": {
-      "spawn_interval": 1.35,
-      "min_interval": 0.9,
+      "spawn_interval": 1.2,
+      "min_interval": 0.75,
       "ramp_per_sec": 0.004,
-      "max_enemies": 3,
+      "max_enemies": 5,
       "enemy_hp_mult": 1.00,
       "enemy_atk_mult": 1.00,
       "enemy_speed_mult": 1.00,
@@ -18,72 +33,72 @@
       "elite_spawn_at_sec": []
     },
     "battle_stage_1": {
-      "spawn_interval": 1.32,
-      "min_interval": 0.78,
-      "ramp_per_sec": 0.008,
-      "max_enemies": 12,
-      "enemy_hp_mult": 1.06,
-      "enemy_atk_mult": 1.05,
-      "enemy_speed_mult": 1.03,
+      "spawn_interval": 1.05,
+      "min_interval": 0.52,
+      "ramp_per_sec": 0.011,
+      "max_enemies": 18,
+      "enemy_hp_mult": 1.12,
+      "enemy_atk_mult": 1.10,
+      "enemy_speed_mult": 1.05,
       "xp_per_kill": 1,
-      "elite_hp_mult": 2.1,
+      "elite_hp_mult": 2.2,
       "elite_xp": 3,
       "mix": [
-        { "kind": "chaser", "weight": 72 },
-        { "kind": "shooter", "weight": 28 }
-      ],
-      "elite_spawn_at_sec": [38]
-    },
-    "battle_stage_2": {
-      "spawn_interval": 1.16,
-      "min_interval": 0.66,
-      "ramp_per_sec": 0.010,
-      "max_enemies": 15,
-      "enemy_hp_mult": 1.16,
-      "enemy_atk_mult": 1.12,
-      "enemy_speed_mult": 1.06,
-      "xp_per_kill": 1,
-      "elite_hp_mult": 2.25,
-      "elite_xp": 3,
-      "mix": [
-        { "kind": "chaser", "weight": 62 },
-        { "kind": "shooter", "weight": 38 }
+        { "kind": "chaser", "weight": 68 },
+        { "kind": "shooter", "weight": 32 }
       ],
       "elite_spawn_at_sec": [30]
     },
-    "battle_stage_3": {
-      "spawn_interval": 1.02,
-      "min_interval": 0.56,
-      "ramp_per_sec": 0.012,
-      "max_enemies": 18,
-      "enemy_hp_mult": 1.28,
-      "enemy_atk_mult": 1.20,
+    "battle_stage_2": {
+      "spawn_interval": 0.88,
+      "min_interval": 0.38,
+      "ramp_per_sec": 0.013,
+      "max_enemies": 26,
+      "enemy_hp_mult": 1.24,
+      "enemy_atk_mult": 1.18,
       "enemy_speed_mult": 1.09,
       "xp_per_kill": 1,
-      "elite_hp_mult": 2.4,
+      "elite_hp_mult": 2.35,
       "elite_xp": 4,
       "mix": [
-        { "kind": "chaser", "weight": 55 },
-        { "kind": "shooter", "weight": 45 }
+        { "kind": "chaser", "weight": 58 },
+        { "kind": "shooter", "weight": 42 }
       ],
-      "elite_spawn_at_sec": [26, 48]
+      "elite_spawn_at_sec": [24, 42]
     },
-    "battle_final": {
-      "spawn_interval": 0.88,
-      "min_interval": 0.44,
-      "ramp_per_sec": 0.014,
-      "max_enemies": 22,
-      "enemy_hp_mult": 1.42,
-      "enemy_atk_mult": 1.35,
+    "battle_stage_3": {
+      "spawn_interval": 0.72,
+      "min_interval": 0.28,
+      "ramp_per_sec": 0.016,
+      "max_enemies": 34,
+      "enemy_hp_mult": 1.38,
+      "enemy_atk_mult": 1.28,
       "enemy_speed_mult": 1.12,
       "xp_per_kill": 1,
-      "elite_hp_mult": 2.6,
+      "elite_hp_mult": 2.55,
       "elite_xp": 5,
       "mix": [
         { "kind": "chaser", "weight": 48 },
         { "kind": "shooter", "weight": 52 }
       ],
-      "elite_spawn_at_sec": [20, 38, 56]
+      "elite_spawn_at_sec": [18, 32, 48]
+    },
+    "battle_final": {
+      "spawn_interval": 0.56,
+      "min_interval": 0.20,
+      "ramp_per_sec": 0.018,
+      "max_enemies": 48,
+      "enemy_hp_mult": 1.62,
+      "enemy_atk_mult": 1.50,
+      "enemy_speed_mult": 1.16,
+      "xp_per_kill": 2,
+      "elite_hp_mult": 2.9,
+      "elite_xp": 6,
+      "mix": [
+        { "kind": "chaser", "weight": 40 },
+        { "kind": "shooter", "weight": 60 }
+      ],
+      "elite_spawn_at_sec": [14, 26, 38, 52, 64]
     }
   }
 }

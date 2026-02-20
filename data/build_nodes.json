@@ -1,9 +1,49 @@
 {
+  "slot_limits": {
+    "weapon": 2,
+    "passive": 3,
+    "godsend": 2,
+    "debt": 2
+  },
+  "build_progression": {
+    "base_budget": 1,
+    "budget_gain_per_level": 1,
+    "max_unspent_budget": 4
+  },
+  "synergy_rules": [
+    {
+      "id": "syn_crossfire_matrix",
+      "label": "交错火力",
+      "required_tags": ["projectile", "precision"],
+      "effect": { "bullet_damage_bonus": 1 }
+    },
+    {
+      "id": "syn_oath_bastion",
+      "label": "誓约壁垒",
+      "required_tags": ["oath", "guard"],
+      "effect": { "def": 1, "hp": 3 }
+    },
+    {
+      "id": "syn_fate_ritual",
+      "label": "命运回路",
+      "required_tags": ["fate", "ritual"],
+      "effect": { "fate": 1, "fire_rate_mult": 0.08 }
+    },
+    {
+      "id": "syn_debt_overdrive",
+      "label": "债务超载",
+      "required_tags": ["debt", "power"],
+      "effect": { "atk": 1, "corruption": 1 }
+    }
+  ],
   "nodes": [
     {
       "id": "node_blazing_volley",
       "label": "烈焰弹幕",
       "description": "额外投射物 +1",
+      "slot": "weapon",
+      "tags": ["projectile", "power"],
+      "tier_cost": 1,
       "weight": 1.0,
       "max_stack": 2,
       "effect": {
@@ -14,6 +54,9 @@
       "id": "node_swift_hands",
       "label": "迅捷施放",
       "description": "射速提升 +15%",
+      "slot": "weapon",
+      "tags": ["projectile", "ritual"],
+      "tier_cost": 1,
       "weight": 1.0,
       "max_stack": 3,
       "effect": {
@@ -24,6 +67,9 @@
       "id": "node_ash_armor",
       "label": "灰烬护甲",
       "description": "受到伤害 -1",
+      "slot": "passive",
+      "tags": ["guard", "oath"],
+      "tier_cost": 1,
       "weight": 0.9,
       "max_stack": 2,
       "effect": {
@@ -34,6 +80,9 @@
       "id": "node_steady_stride",
       "label": "稳步前行",
       "description": "移动速度 +24",
+      "slot": "passive",
+      "tags": ["mobility"],
+      "tier_cost": 1,
       "weight": 0.8,
       "max_stack": 2,
       "effect": {
@@ -44,6 +93,9 @@
       "id": "node_hardened_rounds",
       "label": "穿甲弹芯",
       "description": "子弹伤害 +1",
+      "slot": "weapon",
+      "tags": ["precision", "projectile"],
+      "tier_cost": 1,
       "weight": 0.95,
       "max_stack": 3,
       "effect": {
@@ -54,6 +106,9 @@
       "id": "node_blood_spark",
       "label": "献祭火种",
       "description": "攻击 +1，但腐化 +1",
+      "slot": "debt",
+      "tags": ["debt", "power"],
+      "tier_cost": 1,
       "weight": 0.7,
       "max_stack": 2,
       "effect": {
@@ -65,11 +120,59 @@
       "id": "node_fate_well",
       "label": "命运井",
       "description": "命运 +1，生命 +2",
+      "slot": "godsend",
+      "tags": ["fate", "ritual"],
+      "tier_cost": 1,
       "weight": 0.7,
       "max_stack": 2,
       "effect": {
         "fate": 1,
         "hp": 2
+      }
+    },
+    {
+      "id": "node_guardian_heart",
+      "label": "守誓之心",
+      "description": "防御 +1，生命 +3",
+      "slot": "passive",
+      "tags": ["guard", "oath"],
+      "tier_cost": 2,
+      "required_tags": ["guard"],
+      "weight": 0.8,
+      "max_stack": 2,
+      "effect": {
+        "def": 1,
+        "hp": 3
+      }
+    },
+    {
+      "id": "node_ritual_sigil",
+      "label": "祷印回响",
+      "description": "射速 +8%，命运 +1",
+      "slot": "godsend",
+      "tags": ["ritual", "fate"],
+      "tier_cost": 2,
+      "required_tags": ["ritual"],
+      "weight": 0.75,
+      "max_stack": 2,
+      "effect": {
+        "fire_rate_mult": 0.08,
+        "fate": 1
+      }
+    },
+    {
+      "id": "node_void_oath",
+      "label": "虚空契誓",
+      "description": "攻击 +2，生命 -4",
+      "slot": "debt",
+      "tags": ["debt", "oath", "power"],
+      "tier_cost": 2,
+      "required_tags": ["power"],
+      "weight": 0.55,
+      "max_stack": 1,
+      "effect": {
+        "atk": 2,
+        "hp": -4
       }
     }
   ]

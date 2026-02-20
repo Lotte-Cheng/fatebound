@@ -17,6 +17,7 @@ const ENEMY_MIN_PLAYER_DIST := 170.0
 const ENEMY_MIN_ENEMY_DIST := ENEMY_RADIUS * 2.6
 const ENEMY_SPAWN_ATTEMPTS := 28
 const STATUE_INTERACT_RADIUS := 96.0
+const XP_ORB_RADIUS := 7.0
 const BASE_SHOT_COOLDOWN := 0.2
 const LEVELUP_OPTION_COUNT := 3
 const TUTORIAL_MOVE_DISTANCE := 110.0
@@ -27,6 +28,8 @@ const GUIDE_ARROW_WOBBLE := 10.0
 
 @onready var _hud_panel: PanelContainer = $CanvasLayer/HudPanel
 @onready var _stats_label: Label = $CanvasLayer/HudPanel/VBox/StatsLabel
+@onready var _xp_bar: ProgressBar = $CanvasLayer/HudPanel/VBox/XpBar
+@onready var _xp_bar_label: Label = $CanvasLayer/HudPanel/VBox/XpBarLabel
 @onready var _room_label: Label = $CanvasLayer/HudPanel/VBox/RoomLabel
 @onready var _hint_label: Label = $CanvasLayer/HudPanel/VBox/HintLabel
 @onready var _marker_legend_label: Label = $CanvasLayer/HudPanel/VBox/MarkerLegendLabel
@@ -40,6 +43,7 @@ const GUIDE_ARROW_WOBBLE := 10.0
 @onready var _bless_option_c: Button = $CanvasLayer/HudPanel/VBox/PrayerPanel/BlessOptionC
 @onready var _deity_response_output: RichTextLabel = $CanvasLayer/HudPanel/VBox/PrayerPanel/DeityResponseOutput
 @onready var _levelup_panel: VBoxContainer = $CanvasLayer/HudPanel/VBox/LevelUpPanel
+@onready var _levelup_title_label: Label = $CanvasLayer/HudPanel/VBox/LevelUpPanel/LevelUpTitle
 @onready var _build_option_a: Button = $CanvasLayer/HudPanel/VBox/LevelUpPanel/BuildOptionA
 @onready var _build_option_b: Button = $CanvasLayer/HudPanel/VBox/LevelUpPanel/BuildOptionB
 @onready var _build_option_c: Button = $CanvasLayer/HudPanel/VBox/LevelUpPanel/BuildOptionC
@@ -58,12 +62,17 @@ var _map_cols := 3
 var _map_rows := 3
 var _minimap_cells: Dictionary = {}
 var _spawn_profiles: Dictionary = {}
+var _spawn_global_tuning := {}
 var _build_nodes_catalog: Array[Dictionary] = []
+var _build_slot_limits := {}
+var _build_progression_cfg := {}
+var _build_synergy_rules: Array[Dictionary] = []
 
 var _player_state: Dictionary = {}
 var _player_pos := Vector2.ZERO
 var _bullets: Array[Dictionary] = []
 var _enemy_projectiles: Array[Dictionary] = []
+var _xp_orbs: Array[Dictionary] = []
 var _enemies: Array[Dictionary] = []
 var _battle_is_survival := false
 var _battle_timer_total := 0.0
@@ -86,6 +95,11 @@ var _build_modifiers := {
 	"bullet_damage_bonus": 0
 }
 var _owned_build_stacks: Dictionary = {}
+var _owned_slot_counts: Dictionary = {}
+var _owned_build_tags: Dictionary = {}
+var _active_synergy_ids: Dictionary = {}
+var _build_budget_total := 0
+var _build_budget_spent := 0
 var _levelup_pending := false
 var _levelup_options: Array[Dictionary] = []
 var _tutorial_spawn_pos := Vector2.ZERO
@@ -140,15 +154,16 @@ func _boot_new_run() -> void:
 	_locked_edges.clear()
 	_bullets.clear()
 	_enemy_projectiles.clear()
+	_xp_orbs.clear()
 	_enemies.clear()
 	_logs.clear()
 	_deity_response_output.text = ""
 	_levelup_options.clear()
 	_levelup_pending = false
 	_reset_battle_room_runtime()
-	_reset_build_runtime()
 	_reset_tutorial_runtime()
 	_load_runtime_configs()
+	_reset_build_runtime()
 
 	_map_cols = int((cfg.get("grid", {}) as Dictionary).get("cols", 3))
 	_map_rows = int((cfg.get("grid", {}) as Dictionary).get("rows", 3))
@@ -194,11 +209,37 @@ func _boot_new_run() -> void:
 
 func _load_runtime_configs() -> void:
 	var spawn_cfg: Dictionary = DataLoaderScript.load_json(SPAWN_PROFILES_PATH)
+	_spawn_global_tuning = _default_spawn_tuning()
+	var tuning_cfg: Dictionary = spawn_cfg.get("global_tuning", {})
+	for key_variant in tuning_cfg.keys():
+		var key := String(key_variant)
+		_spawn_global_tuning[key] = tuning_cfg.get(key)
 	_spawn_profiles = (spawn_cfg.get("profiles", {}) as Dictionary).duplicate(true)
 	if _spawn_profiles.is_empty():
 		_spawn_profiles["battle_default"] = _default_spawn_profile()
 
 	var build_cfg: Dictionary = DataLoaderScript.load_json(BUILD_NODES_PATH)
+	_build_slot_limits = _default_build_slot_limits()
+	var slot_limits_cfg: Dictionary = build_cfg.get("slot_limits", {})
+	for slot_variant in slot_limits_cfg.keys():
+		var slot := String(slot_variant)
+		_build_slot_limits[slot] = maxi(0, int(slot_limits_cfg.get(slot, 0)))
+	_build_progression_cfg = _default_build_progression_cfg()
+	var progression_cfg: Dictionary = build_cfg.get("build_progression", {})
+	for key_variant in progression_cfg.keys():
+		var key := String(key_variant)
+		_build_progression_cfg[key] = progression_cfg.get(key)
+
+	_build_synergy_rules.clear()
+	for rule_variant in build_cfg.get("synergy_rules", []):
+		var rule: Dictionary = rule_variant
+		var rule_id := String(rule.get("id", ""))
+		if rule_id.is_empty():
+			continue
+		_build_synergy_rules.append(rule)
+	if _build_synergy_rules.is_empty():
+		_build_synergy_rules = _default_build_synergy_rules()
+
 	_build_nodes_catalog.clear()
 	for node_variant in build_cfg.get("nodes", []):
 		var node: Dictionary = node_variant
@@ -221,12 +262,62 @@ func _default_spawn_profile() -> Dictionary:
 		"elite_spawn_at_sec": [38]
 	}
 
+func _default_spawn_tuning() -> Dictionary:
+	return {
+		"spawn_interval_scale": 1.0,
+		"enemy_hp_scale": 1.0,
+		"enemy_atk_scale": 1.0,
+		"enemy_speed_scale": 1.0,
+		"xp_gain_scale": 1.0,
+		"xp_orb_pickup_radius": 22.0,
+		"xp_orb_magnet_radius": 168.0,
+		"xp_orb_magnet_speed": 420.0,
+		"xp_orb_lifetime_sec": 24.0,
+		"xp_orb_drift_damp": 5.0,
+		"late_wave_start_sec": 24.0,
+		"late_wave_spawn_rate_mult": 1.35,
+		"late_wave_max_enemies_bonus": 12
+	}
+
+func _default_build_slot_limits() -> Dictionary:
+	return {
+		"weapon": 2,
+		"passive": 3,
+		"godsend": 2,
+		"debt": 2
+	}
+
+func _default_build_progression_cfg() -> Dictionary:
+	return {
+		"base_budget": 1,
+		"budget_gain_per_level": 1,
+		"max_unspent_budget": 4
+	}
+
+func _default_build_synergy_rules() -> Array[Dictionary]:
+	return [
+		{
+			"id": "fallback_synergy_projectile",
+			"label": "弹幕协同",
+			"required_tags": ["projectile", "precision"],
+			"effect": {"bullet_damage_bonus": 1}
+		},
+		{
+			"id": "fallback_synergy_guard",
+			"label": "守护协同",
+			"required_tags": ["guard", "oath"],
+			"effect": {"def": 1}
+		}
+	]
+
 func _default_build_nodes() -> Array[Dictionary]:
 	return [
 		{
 			"id": "fallback_damage",
 			"label": "战意注入",
 			"description": "攻击 +1",
+			"slot": "weapon",
+			"tags": ["power", "projectile"],
 			"weight": 1.0,
 			"max_stack": 3,
 			"effect": {"atk": 1}
@@ -235,6 +326,8 @@ func _default_build_nodes() -> Array[Dictionary]:
 			"id": "fallback_guard",
 			"label": "守护注入",
 			"description": "防御 +1",
+			"slot": "passive",
+			"tags": ["guard", "oath"],
 			"weight": 1.0,
 			"max_stack": 3,
 			"effect": {"def": 1}
@@ -243,6 +336,8 @@ func _default_build_nodes() -> Array[Dictionary]:
 			"id": "fallback_life",
 			"label": "命脉注入",
 			"description": "生命 +4",
+			"slot": "godsend",
+			"tags": ["fate", "ritual"],
 			"weight": 1.0,
 			"max_stack": 2,
 			"effect": {"hp": 4}
@@ -266,6 +361,15 @@ func _reset_build_runtime() -> void:
 	_run_xp = 0
 	_run_xp_to_next = 6
 	_owned_build_stacks.clear()
+	_owned_slot_counts.clear()
+	_owned_build_tags.clear()
+	_active_synergy_ids.clear()
+	if _build_slot_limits.is_empty():
+		_build_slot_limits = _default_build_slot_limits()
+	if _build_progression_cfg.is_empty():
+		_build_progression_cfg = _default_build_progression_cfg()
+	_build_budget_total = maxi(1, int(_build_progression_cfg.get("base_budget", 1)))
+	_build_budget_spent = 0
 	_build_modifiers = {
 		"fire_rate_mult": 1.0,
 		"projectile_bonus": 0,
@@ -299,6 +403,7 @@ func _process(delta: float) -> void:
 	_move_player(delta)
 	_update_bullets(delta)
 	_update_enemy_projectiles(delta)
+	_update_xp_orbs(delta)
 	_update_enemies(delta)
 	_update_survival_room(delta)
 	_sync_tutorial_step_log()
@@ -374,6 +479,11 @@ func _draw() -> void:
 	for shot_variant in _enemy_projectiles:
 		var shot: Dictionary = shot_variant
 		draw_circle(shot.get("pos", Vector2.ZERO), BULLET_RADIUS + 1.0, Color(1.0, 0.42, 0.42))
+	for orb_variant in _xp_orbs:
+		var orb: Dictionary = orb_variant
+		var orb_xp := int(orb.get("xp", 1))
+		var orb_color := Color(0.45, 0.92, 1.0) if orb_xp <= 2 else Color(0.95, 0.9, 0.3)
+		draw_circle(orb.get("pos", Vector2.ZERO), XP_ORB_RADIUS + minf(2.5, float(orb_xp) * 0.35), orb_color)
 
 	for enemy_variant in _enemies:
 		var enemy: Dictionary = enemy_variant
@@ -486,6 +596,40 @@ func _update_enemy_projectiles(delta: float) -> void:
 			alive.append(shot)
 	_enemy_projectiles = alive
 
+func _update_xp_orbs(delta: float) -> void:
+	if _xp_orbs.is_empty():
+		return
+	var alive: Array[Dictionary] = []
+	var pickup_radius := float(_spawn_global_tuning.get("xp_orb_pickup_radius", 22.0))
+	var magnet_radius := float(_spawn_global_tuning.get("xp_orb_magnet_radius", 168.0))
+	var magnet_speed := float(_spawn_global_tuning.get("xp_orb_magnet_speed", 420.0))
+	var drift_damp := float(_spawn_global_tuning.get("xp_orb_drift_damp", 5.0))
+	for orb_variant in _xp_orbs:
+		var orb: Dictionary = orb_variant
+		var pos: Vector2 = orb.get("pos", Vector2.ZERO)
+		var vel: Vector2 = orb.get("vel", Vector2.ZERO)
+		var ttl := float(orb.get("ttl", 0.0)) - delta
+		if ttl <= 0.0:
+			continue
+
+		var dist := pos.distance_to(_player_pos)
+		if dist <= pickup_radius + PLAYER_RADIUS:
+			_add_run_xp(int(orb.get("xp", 1)))
+			continue
+
+		if dist <= magnet_radius:
+			var pull_dir := (_player_pos - pos).normalized()
+			vel = vel.lerp(pull_dir * magnet_speed, clampf(delta * 8.0, 0.0, 1.0))
+		else:
+			vel = vel.lerp(Vector2.ZERO, clampf(delta * drift_damp, 0.0, 1.0))
+
+		pos += vel * delta
+		orb["pos"] = _clamp_in_play_rect(pos, XP_ORB_RADIUS)
+		orb["vel"] = vel
+		orb["ttl"] = ttl
+		alive.append(orb)
+	_xp_orbs = alive
+
 func _update_enemies(delta: float) -> void:
 	var updated: Array[Dictionary] = []
 	for enemy_variant in _enemies:
@@ -584,6 +728,7 @@ func _enter_room(room_id: String, spawn_from_dir: String) -> void:
 func _spawn_room_entities() -> void:
 	_bullets.clear()
 	_enemy_projectiles.clear()
+	_xp_orbs.clear()
 	_enemies.clear()
 
 	var room := _current_room()
@@ -669,11 +814,17 @@ func _spawn_survival_enemy() -> void:
 	if _battle_spawn_total_limit > 0 and _battle_spawned_total >= _battle_spawn_total_limit:
 		_battle_spawn_finished = true
 		return
+	var elapsed := _battle_timer_total - _battle_timer_remaining
 	var max_enemies := int(_battle_spawn_profile.get("max_enemies", 16))
+	var late_start := float(_spawn_global_tuning.get("late_wave_start_sec", 24.0))
+	var late_bonus_total := int(_spawn_global_tuning.get("late_wave_max_enemies_bonus", 12))
+	if late_bonus_total > 0 and elapsed > late_start:
+		var remain_span := maxf(1.0, _battle_timer_total - late_start)
+		var ratio := clampf((elapsed - late_start) / remain_span, 0.0, 1.0)
+		max_enemies += int(round(float(late_bonus_total) * ratio))
 	if _enemies.size() >= max_enemies:
 		return
 
-	var elapsed := _battle_timer_total - _battle_timer_remaining
 	var elite_schedule: Array = _battle_spawn_profile.get("elite_spawn_at_sec", [])
 	var spawn_elite := false
 	if _battle_next_elite_index < elite_schedule.size():
@@ -707,8 +858,17 @@ func _current_spawn_interval() -> float:
 	var base := float(_battle_spawn_profile.get("spawn_interval", 1.2))
 	var min_interval := float(_battle_spawn_profile.get("min_interval", 0.55))
 	var ramp := float(_battle_spawn_profile.get("ramp_per_sec", 0.01))
+	var interval_scale := clampf(float(_spawn_global_tuning.get("spawn_interval_scale", 1.0)), 0.2, 3.0)
+	base *= interval_scale
+	min_interval *= interval_scale
 	var elapsed := _battle_timer_total - _battle_timer_remaining
-	return maxf(min_interval, base - elapsed * ramp)
+	var interval := maxf(min_interval, base - elapsed * ramp)
+	var late_start := float(_spawn_global_tuning.get("late_wave_start_sec", 24.0))
+	var late_mult := maxf(1.0, float(_spawn_global_tuning.get("late_wave_spawn_rate_mult", 1.35)))
+	if elapsed > late_start:
+		var late_floor := min_interval * 0.45
+		interval = maxf(late_floor, interval / late_mult)
+	return interval
 
 func _spawn_enemy(kind: String, elite: bool) -> bool:
 	if _battle_is_survival and _battle_spawn_total_limit > 0 and _battle_spawned_total >= _battle_spawn_total_limit:
@@ -721,15 +881,18 @@ func _spawn_enemy(kind: String, elite: bool) -> bool:
 	var hp_mult := float(_battle_spawn_profile.get("enemy_hp_mult", 1.0))
 	var atk_mult := float(_battle_spawn_profile.get("enemy_atk_mult", 1.0))
 	var speed_mult := float(_battle_spawn_profile.get("enemy_speed_mult", 1.0))
+	hp_mult *= float(_spawn_global_tuning.get("enemy_hp_scale", 1.0))
+	atk_mult *= float(_spawn_global_tuning.get("enemy_atk_scale", 1.0))
+	speed_mult *= float(_spawn_global_tuning.get("enemy_speed_scale", 1.0))
 	hp = maxi(1, int(round(float(hp) * hp_mult)))
 	atk = maxi(1, int(round(float(atk) * atk_mult)))
 	speed *= speed_mult
-	var xp := maxi(1, int(_battle_spawn_profile.get("xp_per_kill", 1)))
+	var xp := maxi(1, int(round(float(_battle_spawn_profile.get("xp_per_kill", 1)) * float(_spawn_global_tuning.get("xp_gain_scale", 1.0)))))
 	if elite:
 		hp = maxi(1, int(round(float(hp) * float(_battle_spawn_profile.get("elite_hp_mult", 2.2)))))
 		atk += 1
 		speed *= 1.08
-		xp = maxi(2, int(_battle_spawn_profile.get("elite_xp", 3)))
+		xp = maxi(2, int(round(float(_battle_spawn_profile.get("elite_xp", 3)) * float(_spawn_global_tuning.get("xp_gain_scale", 1.0)))))
 
 	var enemy := {
 		"pos": pos,
@@ -795,7 +958,25 @@ func _on_enemy_defeated(enemy: Dictionary) -> void:
 	var xp_gain := int(enemy.get("xp", 1))
 	if xp_gain <= 0:
 		return
-	_add_run_xp(xp_gain)
+	_drop_xp_orbs(enemy.get("pos", Vector2.ZERO), xp_gain, bool(enemy.get("elite", false)))
+
+func _drop_xp_orbs(origin: Vector2, xp_gain: int, elite: bool) -> void:
+	var orb_count := 1
+	if elite:
+		orb_count = mini(3, maxi(2, int(ceil(float(xp_gain) * 0.5))))
+	var remaining := xp_gain
+	for i in range(orb_count):
+		var splits_left := orb_count - i
+		var value := maxi(1, int(round(float(remaining) / float(splits_left))))
+		remaining -= value
+		var angle := _rng.randf_range(0.0, TAU)
+		var speed := _rng.randf_range(45.0, 110.0)
+		_xp_orbs.append({
+			"pos": origin,
+			"vel": Vector2.RIGHT.rotated(angle) * speed,
+			"ttl": float(_spawn_global_tuning.get("xp_orb_lifetime_sec", 24.0)),
+			"xp": value
+		})
 
 func _add_run_xp(xp_gain: int) -> void:
 	_run_xp += xp_gain
@@ -803,7 +984,15 @@ func _add_run_xp(xp_gain: int) -> void:
 		_run_xp -= _run_xp_to_next
 		_run_level += 1
 		_run_xp_to_next = maxi(8, int(round(float(_run_xp_to_next) * 1.35)))
+		_grant_build_budget_on_levelup()
 		_offer_levelup_choices()
+
+func _grant_build_budget_on_levelup() -> void:
+	var gain := maxi(0, int(_build_progression_cfg.get("budget_gain_per_level", 1)))
+	var max_unspent := maxi(1, int(_build_progression_cfg.get("max_unspent_budget", 4)))
+	_build_budget_total += gain
+	if _build_budget_remaining() > max_unspent:
+		_build_budget_total = _build_budget_spent + max_unspent
 
 func _offer_levelup_choices() -> void:
 	var options: Array[Dictionary] = []
@@ -823,6 +1012,7 @@ func _offer_levelup_choices() -> void:
 			if options.size() >= LEVELUP_OPTION_COUNT:
 				break
 	if options.is_empty():
+		_append_log("当前可选构筑已耗尽（槽位/预算/前置标签或叠层达到限制）。")
 		return
 	_levelup_options = options
 	_levelup_pending = true
@@ -833,6 +1023,8 @@ func _roll_build_options(count: int) -> Array[Dictionary]:
 	for node in _build_nodes_catalog:
 		var node_id := String(node.get("id", ""))
 		if node_id.is_empty():
+			continue
+		if not _can_pick_node(node):
 			continue
 		var max_stack := maxi(1, int(node.get("max_stack", 1)))
 		var owned_stack := int(_owned_build_stacks.get(node_id, 0))
@@ -854,13 +1046,13 @@ func _roll_build_options(count: int) -> Array[Dictionary]:
 func _weighted_node_index(pool: Array[Dictionary]) -> int:
 	var total := 0.0
 	for node in pool:
-		total += maxf(0.01, float(node.get("weight", 1.0)))
+		total += maxf(0.01, float(node.get("weight", 1.0)) * _build_pick_weight(node))
 	if total <= 0.0:
 		return -1
 	var roll := _rng.randf_range(0.0, total)
 	var cursor := 0.0
 	for i in range(pool.size()):
-		cursor += maxf(0.01, float(pool[i].get("weight", 1.0)))
+		cursor += maxf(0.01, float(pool[i].get("weight", 1.0)) * _build_pick_weight(pool[i]))
 		if roll <= cursor:
 			return i
 	return pool.size() - 1
@@ -873,6 +1065,8 @@ func _roll_build_options_from_ids(ids: Array) -> Array[Dictionary]:
 			continue
 		var node := _build_node_by_id(node_id)
 		if node.is_empty():
+			continue
+		if not _can_pick_node(node):
 			continue
 		var max_stack := maxi(1, int(node.get("max_stack", 1)))
 		var owned_stack := int(_owned_build_stacks.get(node_id, 0))
@@ -897,6 +1091,55 @@ func _has_node_in_options(options: Array[Dictionary], node_id: String) -> bool:
 			return true
 	return false
 
+func _node_slot(node: Dictionary) -> String:
+	var slot := String(node.get("slot", "passive"))
+	if slot.is_empty():
+		slot = "passive"
+	return slot
+
+func _can_pick_node_by_slot(node: Dictionary) -> bool:
+	var slot := _node_slot(node)
+	var limit := int(_build_slot_limits.get(slot, 99))
+	if limit <= 0:
+		return false
+	var owned := int(_owned_slot_counts.get(slot, 0))
+	return owned < limit
+
+func _node_tier_cost(node: Dictionary) -> int:
+	return maxi(1, int(node.get("tier_cost", 1)))
+
+func _build_budget_remaining() -> int:
+	return maxi(0, _build_budget_total - _build_budget_spent)
+
+func _has_required_tags(node: Dictionary) -> bool:
+	var required_tags: Array = node.get("required_tags", [])
+	for tag_variant in required_tags:
+		var tag := String(tag_variant)
+		if int(_owned_build_tags.get(tag, 0)) <= 0:
+			return false
+	return true
+
+func _can_pick_node(node: Dictionary) -> bool:
+	if not _can_pick_node_by_slot(node):
+		return false
+	if _node_tier_cost(node) > _build_budget_remaining():
+		return false
+	if not _has_required_tags(node):
+		return false
+	return true
+
+func _build_pick_weight(node: Dictionary) -> float:
+	var weight := 1.0
+	var tags: Array = node.get("tags", [])
+	for tag_variant in tags:
+		var tag := String(tag_variant)
+		if _owned_build_tags.has(tag):
+			weight *= 1.28
+	var slot := _node_slot(node)
+	if int(_owned_slot_counts.get(slot, 0)) <= 0:
+		weight *= 1.08
+	return clampf(weight, 0.4, 3.5)
+
 func _on_build_option_pressed(index: int) -> void:
 	if not _levelup_pending:
 		return
@@ -911,33 +1154,87 @@ func _apply_build_node(node: Dictionary) -> void:
 	var node_id := String(node.get("id", ""))
 	if node_id.is_empty():
 		return
+	var cost := _node_tier_cost(node)
+	if cost > _build_budget_remaining():
+		_append_log("构筑预算不足：需要%d，当前剩余%d。" % [cost, _build_budget_remaining()])
+		return
 	_owned_build_stacks[node_id] = int(_owned_build_stacks.get(node_id, 0)) + 1
+	var slot := _node_slot(node)
+	_owned_slot_counts[slot] = int(_owned_slot_counts.get(slot, 0)) + 1
+	_build_budget_spent += cost
+	_register_node_tags(node.get("tags", []))
 
 	var label := String(node.get("label", node_id))
-	var effect: Dictionary = node.get("effect", {})
+	var tags_text := ", ".join(node.get("tags", []))
+	if tags_text.is_empty():
+		tags_text = "-"
+	_append_log("构筑获得：%s（槽位:%s | 标签:%s | 消耗预算:%d）" % [label, slot, tags_text, cost])
+	_apply_build_effect_bundle(node.get("effect", {}), "构筑：%s" % label)
+	_try_activate_build_synergies()
+
+func _apply_build_effect_bundle(effect: Dictionary, reason: String) -> void:
+	if effect.is_empty():
+		return
 	var direct_effect := {}
+	var modifier_logs: Array[String] = []
 	for key_variant in effect.keys():
 		var key := String(key_variant)
 		match key:
 			"fire_rate_mult":
-				_build_modifiers["fire_rate_mult"] = maxf(
-					0.35,
-					float(_build_modifiers.get("fire_rate_mult", 1.0)) + float(effect.get(key, 0.0))
-				)
+				var before_fire := float(_build_modifiers.get("fire_rate_mult", 1.0))
+				_build_modifiers["fire_rate_mult"] = maxf(0.35, before_fire + float(effect.get(key, 0.0)))
+				modifier_logs.append("fire_rate_mult %.2f -> %.2f" % [before_fire, float(_build_modifiers.get("fire_rate_mult", 1.0))])
 			"projectile_bonus":
-				_build_modifiers["projectile_bonus"] = int(_build_modifiers.get("projectile_bonus", 0)) + int(effect.get(key, 0))
+				var before_projectile := int(_build_modifiers.get("projectile_bonus", 0))
+				_build_modifiers["projectile_bonus"] = before_projectile + int(effect.get(key, 0))
+				modifier_logs.append("projectile_bonus %d -> %d" % [before_projectile, int(_build_modifiers.get("projectile_bonus", 0))])
 			"move_speed_bonus":
-				_build_modifiers["move_speed_bonus"] = float(_build_modifiers.get("move_speed_bonus", 0.0)) + float(effect.get(key, 0.0))
+				var before_speed := float(_build_modifiers.get("move_speed_bonus", 0.0))
+				_build_modifiers["move_speed_bonus"] = before_speed + float(effect.get(key, 0.0))
+				modifier_logs.append("move_speed_bonus %.1f -> %.1f" % [before_speed, float(_build_modifiers.get("move_speed_bonus", 0.0))])
 			"damage_reduction":
-				_build_modifiers["damage_reduction"] = int(_build_modifiers.get("damage_reduction", 0)) + int(effect.get(key, 0))
+				var before_reduction := int(_build_modifiers.get("damage_reduction", 0))
+				_build_modifiers["damage_reduction"] = before_reduction + int(effect.get(key, 0))
+				modifier_logs.append("damage_reduction %d -> %d" % [before_reduction, int(_build_modifiers.get("damage_reduction", 0))])
 			"bullet_damage_bonus":
-				_build_modifiers["bullet_damage_bonus"] = int(_build_modifiers.get("bullet_damage_bonus", 0)) + int(effect.get(key, 0))
+				var before_damage := int(_build_modifiers.get("bullet_damage_bonus", 0))
+				_build_modifiers["bullet_damage_bonus"] = before_damage + int(effect.get(key, 0))
+				modifier_logs.append("bullet_damage_bonus %d -> %d" % [before_damage, int(_build_modifiers.get("bullet_damage_bonus", 0))])
 			_:
 				direct_effect[key] = effect.get(key)
-
-	_append_log("构筑获得：%s（%s）" % [label, String(node.get("description", "无描述"))])
+	if not modifier_logs.is_empty():
+		_append_log("%s：战斗修正 %s" % [reason, "；".join(modifier_logs)])
 	if not direct_effect.is_empty():
-		_apply_effect(direct_effect, "构筑：%s" % label)
+		_apply_effect(direct_effect, reason)
+
+func _register_node_tags(tags: Array) -> void:
+	for tag_variant in tags:
+		var tag := String(tag_variant)
+		if tag.is_empty():
+			continue
+		_owned_build_tags[tag] = int(_owned_build_tags.get(tag, 0)) + 1
+
+func _try_activate_build_synergies() -> void:
+	for rule_variant in _build_synergy_rules:
+		var rule: Dictionary = rule_variant
+		var rule_id := String(rule.get("id", ""))
+		if rule_id.is_empty() or bool(_active_synergy_ids.get(rule_id, false)):
+			continue
+		var required_tags: Array = rule.get("required_tags", [])
+		if required_tags.is_empty():
+			continue
+		var all_hit := true
+		for tag_variant in required_tags:
+			var req_tag := String(tag_variant)
+			if int(_owned_build_tags.get(req_tag, 0)) <= 0:
+				all_hit = false
+				break
+		if not all_hit:
+			continue
+		_active_synergy_ids[rule_id] = true
+		var label := String(rule.get("label", rule_id))
+		_append_log("构筑协同激活：%s（需求:%s）" % [label, ", ".join(required_tags)])
+		_apply_build_effect_bundle(rule.get("effect", {}), "协同：%s" % label)
 
 func _on_room_cleared() -> void:
 	if bool(_cleared.get(_current_room_id, false)):
@@ -1144,7 +1441,7 @@ func _apply_damage_to_player(base_damage: int, reason: String) -> void:
 
 func _update_ui() -> void:
 	var room := _current_room()
-	_stats_label.text = "HP %d | ATK %d | DEF %d | Keys %d | Corruption %d | Fate %d | Lv %d XP %d/%d" % [
+	var core_stats := "HP %d | ATK %d | DEF %d | Keys %d | Corruption %d | Fate %d | Lv %d XP %d/%d" % [
 		int(_player_state.get("hp", 0)),
 		int(_player_state.get("atk", 0)),
 		int(_player_state.get("def", 0)),
@@ -1155,6 +1452,11 @@ func _update_ui() -> void:
 		_run_xp,
 		_run_xp_to_next
 	]
+	_stats_label.text = "%s\n%s" % [core_stats, _build_compact_summary()]
+	_xp_bar.min_value = 0.0
+	_xp_bar.max_value = maxf(1.0, float(_run_xp_to_next))
+	_xp_bar.value = clampf(float(_run_xp), 0.0, _xp_bar.max_value)
+	_xp_bar_label.text = "经验条：%d / %d" % [_run_xp, _run_xp_to_next]
 	var room_type := String(room.get("type", ""))
 	var room_cleared := bool(_cleared.get(_current_room_id, false))
 	if room_type == "battle" and _battle_is_survival and not room_cleared:
@@ -1208,7 +1510,7 @@ func _update_ui() -> void:
 	else:
 		_hint_label.modulate = Color(1, 1, 1, 1)
 
-	_marker_legend_label.text = "标识：怪(追击) | 远(远程) | 门(可通行) | 锁K(双向锁) | 神像(祈福) | 宝箱(大奖励)"
+	_marker_legend_label.text = "标识：怪(追击) | 远(远程) | 蓝球(XP) | 门(可通行) | 锁K(双向锁) | 神像(祈福) | 宝箱(大奖励)"
 	_adjacent_preview_label.text = _build_adjacent_preview_text()
 	_pray_button.visible = _can_pray_current_room()
 	_refresh_prayer_panel()
@@ -1275,7 +1577,7 @@ func _tutorial_hint_text() -> String:
 			return "教学2/4：左键开火演示（%d/%d）。完成后开始刷怪。" % [_tutorial_shots_fired, TUTORIAL_SHOTS_REQUIRED]
 		2:
 			var remain := maxi(0, _run_xp_to_next - _run_xp)
-			return "教学3/4：击败怪物升级（XP %d/%d，已击败%d，预计还需%d只）。" % [_run_xp, _run_xp_to_next, _tutorial_kills, remain]
+			return "教学3/4：击败怪物并拾取经验晶体（XP %d/%d，已击败%d，预计还需%d只）。" % [_run_xp, _run_xp_to_next, _tutorial_kills, remain]
 		3:
 			return "教学4/4：从固定构筑中选1个（按1/2/3或点击按钮）。"
 		4:
@@ -1296,7 +1598,7 @@ func _sync_tutorial_step_log() -> void:
 		1:
 			_append_log("教学2/4：按左键开火3次，完成后开始刷怪。")
 		2:
-			_append_log("教学3/4：击败怪物获取XP，升到Lv2。")
+			_append_log("教学3/4：击败怪物并拾取经验晶体，升到Lv2。")
 		3:
 			_append_log("教学4/4：请选择一个构筑升级。")
 		4:
@@ -1315,7 +1617,7 @@ func _draw_tutorial_world_guidance(rect: Rect2) -> void:
 			_draw_guide_arrow(_player_pos + Vector2(38, -22), Vector2(-1.0, 0.3), Color(1.0, 0.92, 0.45), "左键开火")
 		2:
 			var remain := maxi(0, _run_xp_to_next - _run_xp)
-			_draw_world_text(rect.position + Vector2(8, 82), "击败怪物升级：XP %d/%d，剩余约%d只" % [_run_xp, _run_xp_to_next, remain], Color(0.85, 1.0, 0.55))
+			_draw_world_text(rect.position + Vector2(8, 82), "击败并拾取经验晶体：XP %d/%d，剩余约%d只" % [_run_xp, _run_xp_to_next, remain], Color(0.85, 1.0, 0.55))
 			var enemy_target := _first_enemy_pos_or_center()
 			_draw_guide_arrow(enemy_target + Vector2(0, -24), Vector2(0.0, 1.0), Color(0.85, 1.0, 0.55), "优先清怪")
 		3:
@@ -1345,11 +1647,48 @@ func _first_enemy_pos_or_center() -> Vector2:
 		return enemy.get("pos", _play_rect().get_center())
 	return _play_rect().get_center()
 
+func _build_compact_summary() -> String:
+	var order := ["weapon", "passive", "godsend", "debt"]
+	var labels := {"weapon": "武", "passive": "被", "godsend": "赐", "debt": "债"}
+	var slot_parts: Array[String] = []
+	for slot_variant in order:
+		var slot := String(slot_variant)
+		var owned := int(_owned_slot_counts.get(slot, 0))
+		var limit := int(_build_slot_limits.get(slot, 0))
+		slot_parts.append("%s%d/%d" % [String(labels.get(slot, slot)), owned, limit])
+	var top_tags := _top_build_tags(3)
+	var tag_text := "-"
+	if not top_tags.is_empty():
+		tag_text = ", ".join(top_tags)
+	return "构筑槽[%s] | 预算%d | 标签[%s] | 协同%d" % [
+		" ".join(slot_parts),
+		_build_budget_remaining(),
+		tag_text,
+		_active_synergy_ids.size()
+	]
+
+func _top_build_tags(limit: int) -> Array[String]:
+	var items: Array[Dictionary] = []
+	for tag_variant in _owned_build_tags.keys():
+		var tag := String(tag_variant)
+		items.append({"tag": tag, "count": int(_owned_build_tags.get(tag, 0))})
+	items.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		if int(a.get("count", 0)) == int(b.get("count", 0)):
+			return String(a.get("tag", "")) < String(b.get("tag", ""))
+		return int(a.get("count", 0)) > int(b.get("count", 0))
+	)
+	var result: Array[String] = []
+	for i in range(mini(limit, items.size())):
+		result.append("%s×%d" % [String(items[i].get("tag", "")), int(items[i].get("count", 0))])
+	return result
+
 func _refresh_levelup_panel() -> void:
 	_levelup_panel.visible = _levelup_pending
 	if not _levelup_pending:
+		_levelup_title_label.text = "升级选择（3选1）"
 		_levelup_panel.modulate = Color(1, 1, 1, 1)
 		return
+	_levelup_title_label.text = "升级选择（3选1）\n%s" % _build_compact_summary()
 	if _is_tutorial_active():
 		var panel_pulse := 0.78 + 0.22 * (0.5 + 0.5 * sin(float(Time.get_ticks_msec()) * 0.014))
 		_levelup_panel.modulate = Color(1.0, 1.0, 1.0, panel_pulse)
@@ -1363,11 +1702,24 @@ func _refresh_levelup_panel() -> void:
 			var node: Dictionary = _levelup_options[i]
 			btn.visible = true
 			var prefix := arrow_prefix if _is_tutorial_active() else ""
-			btn.text = "%s%d) %s - %s" % [
+			var slot := _node_slot(node)
+			var tags: Array = node.get("tags", [])
+			var tags_text := ""
+			if not tags.is_empty():
+				tags_text = " | " + "/".join(tags)
+			var req_tags: Array = node.get("required_tags", [])
+			var req_text := ""
+			if not req_tags.is_empty():
+				req_text = " | 前置:" + "/".join(req_tags)
+			btn.text = "%s%d) [%s|费%d] %s - %s%s%s" % [
 				prefix,
 				i + 1,
+				slot,
+				_node_tier_cost(node),
 				String(node.get("label", "构筑")),
-				String(node.get("description", ""))
+				String(node.get("description", "")),
+				tags_text,
+				req_text
 			]
 		else:
 			btn.visible = false

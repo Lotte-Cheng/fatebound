@@ -25,6 +25,17 @@ text = "Fatebound Action Dungeon"
 layout_mode = 2
 text = "HP 0 | ATK 0 | DEF 0 | Keys 0"
 
+[node name="XpBar" type="ProgressBar" parent="CanvasLayer/HudPanel/VBox"]
+custom_minimum_size = Vector2(0, 18)
+layout_mode = 2
+max_value = 10.0
+value = 0.0
+show_percentage = false
+
+[node name="XpBarLabel" type="Label" parent="CanvasLayer/HudPanel/VBox"]
+layout_mode = 2
+text = "经验条：0 / 10"
+
 [node name="RoomLabel" type="Label" parent="CanvasLayer/HudPanel/VBox"]
 layout_mode = 2
 text = "Room"
