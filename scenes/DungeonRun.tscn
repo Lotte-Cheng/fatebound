@@ -36,6 +36,16 @@ show_percentage = false
 layout_mode = 2
 text = "经验条：0 / 10"
 
+[node name="BuildStateLabel" type="Label" parent="CanvasLayer/HudPanel/VBox"]
+layout_mode = 2
+autowrap_mode = 3
+text = "构筑槽[武0/2 被0/3 赐0/2 债0/2] | 预算1 | 标签[-] | 协同0"
+
+[node name="SynergyStateLabel" type="Label" parent="CanvasLayer/HudPanel/VBox"]
+layout_mode = 2
+autowrap_mode = 3
+text = "协同状态：无"
+
 [node name="RoomLabel" type="Label" parent="CanvasLayer/HudPanel/VBox"]
 layout_mode = 2
 text = "Room"

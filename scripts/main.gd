@@ -97,12 +97,11 @@ func _render_state() -> void:
 		return
 	var state: Dictionary = _rule_engine.get_state()
 	var inventory: Dictionary = state.get("inventory", {})
-	_state_label.text = "HP %d | ATK %d | DEF %d | Corruption %d | Fate %d | Keys %d" % [
+	_state_label.text = "HP %d | ATK %d | DEF %d | Corruption %d | Keys %d" % [
 		int(state.get("hp", 0)),
 		int(state.get("atk", 0)),
 		int(state.get("def", 0)),
 		int(state.get("corruption", 0)),
-		int(state.get("fate", 0)),
 		int(inventory.get("keys", 0))
 	]
 

@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://c5w3lbeeowmii"
+
+[deps]
+
+files=["res://data/csv/spawn_profiles.spawn.translation", "res://data/csv/spawn_profiles.min.translation", "res://data/csv/spawn_profiles.ramp.translation", "res://data/csv/spawn_profiles.max.translation", "res://data/csv/spawn_profiles.enemy.translation", "res://data/csv/spawn_profiles.enemy.translation", "res://data/csv/spawn_profiles.enemy.translation", "res://data/csv/spawn_profiles.xp.translation", "res://data/csv/spawn_profiles.elite.translation", "res://data/csv/spawn_profiles.elite.translation", "res://data/csv/spawn_profiles.mix.translation", "res://data/csv/spawn_profiles.elite.translation"]
+
+source_file="res://data/csv/spawn_profiles.csv"
+dest_files=["res://data/csv/spawn_profiles.spawn.translation", "res://data/csv/spawn_profiles.min.translation", "res://data/csv/spawn_profiles.ramp.translation", "res://data/csv/spawn_profiles.max.translation", "res://data/csv/spawn_profiles.enemy.translation", "res://data/csv/spawn_profiles.enemy.translation", "res://data/csv/spawn_profiles.enemy.translation", "res://data/csv/spawn_profiles.xp.translation", "res://data/csv/spawn_profiles.elite.translation", "res://data/csv/spawn_profiles.elite.translation", "res://data/csv/spawn_profiles.mix.translation", "res://data/csv/spawn_profiles.elite.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

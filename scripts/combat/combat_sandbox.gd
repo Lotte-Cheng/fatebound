@@ -7,7 +7,7 @@ const MAIN_SCENE_PATH := "res://scenes/Main.tscn"
 const PLAYER_RADIUS := 14.0
 const ENEMY_RADIUS := 16.0
 const BULLET_RADIUS := 4.0
-const MIN_EFFECT_KEYS := ["hp", "atk", "def", "corruption", "fate", "keys"]
+const MIN_EFFECT_KEYS := ["hp", "atk", "def", "corruption", "keys"]
 
 signal combat_finished(report: Dictionary)
 
@@ -34,14 +34,11 @@ var _enemy_attack_cd := 0.0
 var _min_atk := 0
 var _min_def := 0
 var _corruption_threshold := 999
-var _fate_threshold := 999
 var _key_drop_on_win := 0
 
 var _atk_penalty_damage := 0
 var _def_penalty_damage := 0
 var _enemy_bonus_attack := 0
-var _fate_guard_available := false
-var _fate_loot_bonus_applied := false
 
 var _shoot_cooldown := 0.0
 var _shoot_interval := 0.22
@@ -141,14 +138,11 @@ func _start_battle() -> void:
 	_min_atk = int(_room_cfg.get("min_atk", 0))
 	_min_def = int(_room_cfg.get("min_def", 0))
 	_corruption_threshold = int(_room_cfg.get("corruption_threshold", 999))
-	_fate_threshold = int(_room_cfg.get("fate_threshold", 999))
 	_key_drop_on_win = int(_room_cfg.get("key_drop_on_win", 0))
 
 	_atk_penalty_damage = 0
 	_def_penalty_damage = 0
 	_enemy_bonus_attack = 0
-	_fate_guard_available = false
-	_fate_loot_bonus_applied = false
 	_shoot_cooldown = 0.0
 	_shoot_interval = 0.22
 
@@ -159,18 +153,16 @@ func _apply_threshold_modifiers() -> void:
 	var player_atk := int(_player_state.get("atk", 0))
 	var player_def := int(_player_state.get("def", 0))
 	var player_corruption := int(_player_state.get("corruption", 0))
-	var player_fate := int(_player_state.get("fate", 0))
 
-	_append_log("战斗阈值：min_atk=%d min_def=%d corruption_threshold=%d fate_threshold=%d" % [
-		_min_atk, _min_def, _corruption_threshold, _fate_threshold
+	_append_log("战斗阈值：min_atk=%d min_def=%d corruption_threshold=%d" % [
+		_min_atk, _min_def, _corruption_threshold
 	])
 	_append_log("敌人：hp=%d atk=%d def=%d" % [_enemy_hp, _enemy_atk, _enemy_def])
-	_append_log("玩家：hp=%d atk=%d def=%d corruption=%d fate=%d keys=%d" % [
+	_append_log("玩家：hp=%d atk=%d def=%d corruption=%d keys=%d" % [
 		int(_player_state.get("hp", 0)),
 		player_atk,
 		player_def,
 		player_corruption,
-		player_fate,
 		int(_player_state.get("keys", 0))
 	])
 
@@ -187,10 +179,6 @@ func _apply_threshold_modifiers() -> void:
 	if player_corruption >= _corruption_threshold:
 		_enemy_bonus_attack = 1
 		_append_log("Corruption 超阈：敌人强化，ATK +1")
-
-	if player_fate >= _fate_threshold:
-		_fate_guard_available = true
-		_append_log("Fate 达标：获得一次命运护盾（抵消首次受伤）")
 
 func _move_player(delta: float) -> void:
 	var axis := Vector2.ZERO
@@ -266,10 +254,6 @@ func _update_enemy(delta: float) -> void:
 func _apply_damage_to_player(amount: int, reason: String) -> void:
 	if amount <= 0:
 		return
-	if _fate_guard_available:
-		_fate_guard_available = false
-		_append_log("%s：命运护盾生效，本次伤害被抵消" % reason)
-		return
 
 	var before := int(_player_state.get("hp", 0))
 	var after := maxi(0, before - amount)
@@ -288,10 +272,6 @@ func _check_battle_end() -> void:
 	if _enemy_hp <= 0:
 		_battle_over = true
 		var key_gain := _key_drop_on_win
-		if int(_player_state.get("fate", 0)) >= _fate_threshold and not _fate_loot_bonus_applied:
-			key_gain += 1
-			_fate_loot_bonus_applied = true
-			_append_log("Fate 阈值奖励：额外掉落 +1 神之钥匙")
 		if key_gain > 0:
 			var before_keys := int(_player_state.get("keys", 0))
 			var after_keys := before_keys + key_gain
@@ -302,22 +282,20 @@ func _check_battle_end() -> void:
 		_emit_embedded_result()
 
 func _update_hud() -> void:
-	_stats_label.text = "玩家 HP %d | ATK %d | DEF %d | Corruption %d | Fate %d | Keys %d || 敌人 HP %d ATK %d DEF %d" % [
+	_stats_label.text = "玩家 HP %d | ATK %d | DEF %d | Corruption %d | Keys %d || 敌人 HP %d ATK %d DEF %d" % [
 		int(_player_state.get("hp", 0)),
 		int(_player_state.get("atk", 0)),
 		int(_player_state.get("def", 0)),
 		int(_player_state.get("corruption", 0)),
-		int(_player_state.get("fate", 0)),
 		int(_player_state.get("keys", 0)),
 		_enemy_hp,
 		_enemy_atk + _enemy_bonus_attack,
 		_enemy_def
 	]
-	_threshold_label.text = "阈值判定：ATK>=%d DEF>=%d Corruption<%d Fate>=%d" % [
+	_threshold_label.text = "阈值判定：ATK>=%d DEF>=%d Corruption<%d" % [
 		_min_atk,
 		_min_def,
-		_corruption_threshold,
-		_fate_threshold
+		_corruption_threshold
 	]
 	if _battle_over:
 		_result_label.text = _battle_result + "（R 重置）"

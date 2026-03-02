@@ -23,11 +23,10 @@ func set_room(room_data: Dictionary, room_index: int, room_total: int, resolved:
 	]
 
 	if room_type == "combat_room":
-		detail_lines.append("阈值：ATK>=%d DEF>=%d | Corruption阈值=%d Fate阈值=%d" % [
+		detail_lines.append("阈值：ATK>=%d DEF>=%d | Corruption阈值=%d" % [
 			int(room_data.get("min_atk", 0)),
 			int(room_data.get("min_def", 0)),
-			int(room_data.get("corruption_threshold", 999)),
-			int(room_data.get("fate_threshold", 999))
+			int(room_data.get("corruption_threshold", 999))
 		])
 		detail_lines.append("敌人：HP %d ATK %d DEF %d | 胜利掉钥匙 %+d" % [
 			int(room_data.get("enemy_hp", 0)),

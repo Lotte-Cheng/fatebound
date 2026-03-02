@@ -1,0 +1,4 @@
+interface:
+  display_name: "Docs Sync and Commit"
+  short_description: "Check docs consistency and perform git commit workflow"
+  default_prompt: "Run docs-sync-and-commit on this repository and commit changes."

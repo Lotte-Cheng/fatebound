@@ -1,0 +1,5 @@
+id,label,required_tags,effect_json
+syn_crossfire_matrix,交错火力,projectile|precision,"{""bullet_damage_bonus"":1}"
+syn_oath_bastion,誓约壁垒,oath|guard,"{""def"":1,""hp"":3}"
+syn_ritual_vigor,祷印回路,blessing|ritual,"{""hp"":2,""fire_rate_mult"":0.08}"
+syn_debt_overdrive,债务超载,debt|power,"{""atk"":1,""corruption"":1}"

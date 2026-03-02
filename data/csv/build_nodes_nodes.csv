@@ -1,0 +1,11 @@
+id,label,description,slot,tags,required_tags,tier_cost,weight,max_stack,effect_json
+node_blazing_volley,烈焰弹幕,额外投射物 +1,weapon,projectile|power,,1,1.0,2,"{""projectile_bonus"":1}"
+node_swift_hands,迅捷施放,射速提升 +15%,weapon,projectile|ritual,,1,1.0,3,"{""fire_rate_mult"":0.15}"
+node_ash_armor,灰烬护甲,受到伤害 -1,passive,guard|oath,,1,0.9,2,"{""damage_reduction"":1}"
+node_steady_stride,稳步前行,移动速度 +24,passive,mobility,,1,0.8,2,"{""move_speed_bonus"":24}"
+node_hardened_rounds,穿甲弹芯,子弹伤害 +1,weapon,precision|projectile,,1,0.95,3,"{""bullet_damage_bonus"":1}"
+node_blood_spark,献祭火种,攻击 +1 但腐化 +1,debt,debt|power,,1,0.7,2,"{""atk"":1,""corruption"":1}"
+node_blessing_well,赐福井,生命 +3 防御 +1,godsend,blessing|ritual,,1,0.7,2,"{""hp"":3,""def"":1}"
+node_guardian_heart,守誓之心,防御 +1 生命 +3,passive,guard|oath,guard,2,0.8,2,"{""def"":1,""hp"":3}"
+node_ritual_sigil,祷印回响,射速 +8% 生命 +2,godsend,ritual|blessing,ritual,2,0.75,2,"{""fire_rate_mult"":0.08,""hp"":2}"
+node_void_oath,虚空契誓,攻击 +2 生命 -4,debt,debt|oath|power,power,2,0.55,1,"{""atk"":2,""hp"":-4}"

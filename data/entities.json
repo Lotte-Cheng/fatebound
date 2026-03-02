@@ -16,7 +16,7 @@
       "reward_pool": [
         { "id": "solune_oath_hp", "type": "stat", "stat": "hp", "delta": 3, "label": "晨光庇佑：HP +3", "weight": 1.0 },
         { "id": "solune_oath_def", "type": "stat", "stat": "def", "delta": 1, "label": "誓约护盾：DEF +1", "weight": 1.0 },
-        { "id": "solune_oath_fate", "type": "stat", "stat": "fate", "delta": 2, "label": "命线校准：Fate +2", "weight": 0.9 }
+        { "id": "solune_oath_fate", "type": "stat", "stat": "def", "delta": 1, "label": "命线校准：DEF +1", "weight": 0.9 }
       ],
       "curse_pool": [
         { "id": "solune_curse_atk", "type": "stat", "stat": "atk", "delta": -1, "label": "誓约裂痕：ATK -1", "weight": 1.0 },
@@ -39,7 +39,7 @@
       "reward_pool": [
         { "id": "tharos_boon_atk", "type": "stat", "stat": "atk", "delta": 2, "label": "血战赐福：ATK +2", "weight": 1.0 },
         { "id": "tharos_boon_hp", "type": "stat", "stat": "hp", "delta": 2, "label": "战争亢奋：HP +2", "weight": 0.8 },
-        { "id": "tharos_boon_fate", "type": "stat", "stat": "fate", "delta": 1, "label": "凯旋星火：Fate +1", "weight": 0.8 }
+        { "id": "tharos_boon_fate", "type": "stat", "stat": "hp", "delta": 2, "label": "凯旋星火：HP +2", "weight": 0.8 }
       ],
       "curse_pool": [
         { "id": "tharos_curse_hp", "type": "stat", "stat": "hp", "delta": -3, "label": "战意反噬：HP -3", "weight": 1.0 },
@@ -60,12 +60,12 @@
         "deceptive": -1
       },
       "reward_pool": [
-        { "id": "nyra_boon_fate", "type": "stat", "stat": "fate", "delta": 3, "label": "命运回声：Fate +3", "weight": 1.0 },
+        { "id": "nyra_boon_fate", "type": "stat", "stat": "def", "delta": 2, "label": "命运回声：DEF +2", "weight": 1.0 },
         { "id": "nyra_boon_key", "type": "inventory", "item": "keys", "delta": 1, "label": "秘钥回赠：Keys +1", "weight": 0.9 },
         { "id": "nyra_boon_corruption", "type": "stat", "stat": "corruption", "delta": -1, "label": "净化低语：Corruption -1", "weight": 0.8 }
       ],
       "curse_pool": [
-        { "id": "nyra_curse_fate", "type": "stat", "stat": "fate", "delta": -2, "label": "错位命盘：Fate -2", "weight": 1.0 },
+        { "id": "nyra_curse_fate", "type": "stat", "stat": "def", "delta": -1, "label": "错位命盘：DEF -1", "weight": 1.0 },
         { "id": "nyra_curse_hp", "type": "stat", "stat": "hp", "delta": -2, "label": "反噬符文：HP -2", "weight": 0.8 }
       ]
     },
@@ -85,12 +85,12 @@
       "reward_pool": [
         { "id": "murmur_boon_atk", "type": "stat", "stat": "atk", "delta": 2, "label": "深渊狂喜：ATK +2", "weight": 1.0 },
         { "id": "murmur_boon_key", "type": "inventory", "item": "keys", "delta": 2, "label": "黑钥馈赠：Keys +2", "weight": 0.8 },
-        { "id": "murmur_boon_fate", "type": "stat", "stat": "fate", "delta": 2, "label": "扭曲幸运：Fate +2", "weight": 0.7 }
+        { "id": "murmur_boon_fate", "type": "stat", "stat": "hp", "delta": 3, "label": "扭曲幸运：HP +3", "weight": 0.7 }
       ],
       "curse_pool": [
         { "id": "murmur_curse_corruption", "type": "stat", "stat": "corruption", "delta": 2, "label": "深渊印记：Corruption +2", "weight": 1.0 },
         { "id": "murmur_curse_hp", "type": "stat", "stat": "hp", "delta": -2, "label": "灵魂渗血：HP -2", "weight": 0.9 },
-        { "id": "murmur_curse_fate", "type": "stat", "stat": "fate", "delta": -1, "label": "命线污染：Fate -1", "weight": 0.8 }
+        { "id": "murmur_curse_fate", "type": "stat", "stat": "hp", "delta": -2, "label": "命线污染：HP -2", "weight": 0.8 }
       ]
     }
   ]

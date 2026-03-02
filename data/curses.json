@@ -42,11 +42,11 @@
       "id": "curse_mystic_blur",
       "label": "命盘错位",
       "severity": 1,
-      "tags": ["fate_loss"],
+      "tags": ["def_loss"],
       "trigger": "after_room",
-      "condition": { "stat": "fate", "op": ">=", "value": 2 },
-      "effect": { "fate": -1 },
-      "effects": { "fate": -1 }
+      "condition": { "stat": "corruption", "op": ">=", "value": 2 },
+      "effect": { "def": -1 },
+      "effects": { "def": -1 }
     },
     {
       "id": "curse_mystic_echo",
@@ -80,10 +80,10 @@
       "id": "curse_abyss_twist",
       "label": "命线扭曲",
       "severity": 2,
-      "tags": ["fate_loss", "corruption", "high_risk"],
+      "tags": ["hp_loss", "corruption", "high_risk"],
       "trigger": "after_room",
-      "effect": { "fate": -1, "corruption": 1 },
-      "effects": { "fate": -1, "corruption": 1 }
+      "effect": { "hp": -2, "corruption": 1 },
+      "effects": { "hp": -2, "corruption": 1 }
     },
     {
       "id": "curse_pact_debt",

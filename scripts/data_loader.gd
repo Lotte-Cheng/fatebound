@@ -22,3 +22,34 @@ static func load_json(path: String) -> Dictionary:
 		return {}
 
 	return parser.data as Dictionary
+
+static func load_csv_rows(path: String) -> Array[Dictionary]:
+	if not FileAccess.file_exists(path):
+		return []
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		push_error("CSV open failed: %s" % path)
+		return []
+	if file.eof_reached():
+		return []
+	var headers: PackedStringArray = file.get_csv_line()
+	if headers.is_empty():
+		return []
+	headers[0] = headers[0].trim_prefix("\ufeff")
+	for i in range(headers.size()):
+		headers[i] = String(headers[i]).strip_edges()
+	var rows: Array[Dictionary] = []
+	while not file.eof_reached():
+		var cols: PackedStringArray = file.get_csv_line()
+		if cols.is_empty():
+			continue
+		if cols.size() == 1 and String(cols[0]).strip_edges().is_empty():
+			continue
+		var row := {}
+		for i in range(headers.size()):
+			var key := String(headers[i])
+			if key.is_empty():
+				continue
+			row[key] = String(cols[i]).strip_edges() if i < cols.size() else ""
+		rows.append(row)
+	return rows

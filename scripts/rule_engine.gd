@@ -129,8 +129,6 @@ func _resolve_combat(intent_json: Dictionary, result: Dictionary) -> void:
 	if damage_to_player > 0:
 		_apply_stat_delta("hp", -damage_to_player, "遭受反击：HP %d" % -damage_to_player, result, "combat_damage")
 
-	if int(profile.get("fate_delta", 0)) != 0:
-		_apply_stat_delta("fate", int(profile.get("fate_delta", 0)), "战斗意图影响命运", result, "combat_profile")
 	if int(profile.get("corruption_delta", 0)) != 0:
 		_apply_stat_delta("corruption", int(profile.get("corruption_delta", 0)), "战斗意图影响腐化", result, "combat_profile")
 
@@ -203,8 +201,6 @@ func _resolve_secret(intent_json: Dictionary, result: Dictionary) -> void:
 		result["events"].append("钥匙不足，密室未开启")
 
 func _apply_resolution_deltas(resolution: Dictionary, result: Dictionary, source: String) -> void:
-	if int(resolution.get("fate_delta", 0)) != 0:
-		_apply_stat_delta("fate", int(resolution.get("fate_delta", 0)), "命运变化", result, source)
 	if int(resolution.get("corruption_delta", 0)) != 0:
 		_apply_stat_delta("corruption", int(resolution.get("corruption_delta", 0)), "腐化变化", result, source)
 	if int(resolution.get("hp_delta", 0)) != 0:
@@ -280,6 +276,8 @@ func _apply_stat_delta(
 		effect_id: String = ""
 	) -> void:
 	if stat.is_empty() or delta == 0:
+		return
+	if stat == "fate":
 		return
 	if not _state.has(stat):
 		_state[stat] = 0
@@ -377,7 +375,6 @@ func _pick_attitude(attitude_table: Array, bias: int) -> Dictionary:
 		"id": "neutral",
 		"reward_rolls": 1,
 		"curse_rolls": 1,
-		"fate_delta": 0,
 		"corruption_delta": 0
 	}
 
@@ -392,11 +389,6 @@ func _check_end_conditions(completed_turn: int) -> void:
 		_finish_reason = "腐化失控，邪灵吞没了你。"
 		return
 
-	if int(_state.get("fate", 0)) >= int(_config.get("victory_fate", 999)):
-		_finished = true
-		_finish_reason = "你完成了命运绑定，暂时压制了低语。"
-		return
-
 	if completed_turn >= int(_config.get("max_turns", 999)):
 		_finished = true
 		_finish_reason = "时限已到，本次远征结束。"
@@ -404,7 +396,7 @@ func _check_end_conditions(completed_turn: int) -> void:
 
 func _clamp_state() -> void:
 	var limits: Dictionary = _config.get("state_limits", {})
-	for stat in ["hp", "atk", "def", "corruption", "fate"]:
+	for stat in ["hp", "atk", "def", "corruption"]:
 		var range_cfg: Dictionary = limits.get(stat, {})
 		if range_cfg.is_empty():
 			continue

@@ -4,6 +4,12 @@ const DataLoaderScript = preload("res://scripts/data_loader.gd")
 const DUNGEON_PATH := "res://data/dungeon_layout.json"
 const SPAWN_PROFILES_PATH := "res://data/spawn_profiles.json"
 const BUILD_NODES_PATH := "res://data/build_nodes.json"
+const SPAWN_GLOBAL_TUNING_CSV_PATH := "res://data/csv/spawn_global_tuning.csv"
+const SPAWN_PROFILES_CSV_PATH := "res://data/csv/spawn_profiles.csv"
+const BUILD_SLOT_LIMITS_CSV_PATH := "res://data/csv/build_nodes_slot_limits.csv"
+const BUILD_PROGRESSION_CSV_PATH := "res://data/csv/build_nodes_progression.csv"
+const BUILD_SYNERGIES_CSV_PATH := "res://data/csv/build_nodes_synergy_rules.csv"
+const BUILD_NODES_CSV_PATH := "res://data/csv/build_nodes_nodes.csv"
 
 const PLAYER_RADIUS := 14.0
 const ENEMY_RADIUS := 14.0
@@ -30,6 +36,8 @@ const GUIDE_ARROW_WOBBLE := 10.0
 @onready var _stats_label: Label = $CanvasLayer/HudPanel/VBox/StatsLabel
 @onready var _xp_bar: ProgressBar = $CanvasLayer/HudPanel/VBox/XpBar
 @onready var _xp_bar_label: Label = $CanvasLayer/HudPanel/VBox/XpBarLabel
+@onready var _build_state_label: Label = $CanvasLayer/HudPanel/VBox/BuildStateLabel
+@onready var _synergy_state_label: Label = $CanvasLayer/HudPanel/VBox/SynergyStateLabel
 @onready var _room_label: Label = $CanvasLayer/HudPanel/VBox/RoomLabel
 @onready var _hint_label: Label = $CanvasLayer/HudPanel/VBox/HintLabel
 @onready var _marker_legend_label: Label = $CanvasLayer/HudPanel/VBox/MarkerLegendLabel
@@ -102,6 +110,8 @@ var _build_budget_total := 0
 var _build_budget_spent := 0
 var _levelup_pending := false
 var _levelup_options: Array[Dictionary] = []
+var _levelup_blocked_reasons: Dictionary = {}
+var _levelup_blocker_hint := ""
 var _tutorial_spawn_pos := Vector2.ZERO
 var _tutorial_move_done := false
 var _tutorial_shots_fired := 0
@@ -159,6 +169,8 @@ func _boot_new_run() -> void:
 	_logs.clear()
 	_deity_response_output.text = ""
 	_levelup_options.clear()
+	_levelup_blocked_reasons.clear()
+	_levelup_blocker_hint = ""
 	_levelup_pending = false
 	_reset_battle_room_runtime()
 	_reset_tutorial_runtime()
@@ -169,6 +181,8 @@ func _boot_new_run() -> void:
 	_map_rows = int((cfg.get("grid", {}) as Dictionary).get("rows", 3))
 	_start_room_id = String(cfg.get("start_room_id", ""))
 	_player_state = (cfg.get("initial_state", {}) as Dictionary).duplicate(true)
+	# Fate is deprecated in the action-loop prototype. Keep field absent to avoid UI/log noise.
+	_player_state.erase("fate")
 	_player_state["hp"] = maxi(1, int(_player_state.get("hp", 20)))
 
 	for room_variant in cfg.get("rooms", []):
@@ -208,7 +222,7 @@ func _boot_new_run() -> void:
 	queue_redraw()
 
 func _load_runtime_configs() -> void:
-	var spawn_cfg: Dictionary = DataLoaderScript.load_json(SPAWN_PROFILES_PATH)
+	var spawn_cfg: Dictionary = _load_spawn_config()
 	_spawn_global_tuning = _default_spawn_tuning()
 	var tuning_cfg: Dictionary = spawn_cfg.get("global_tuning", {})
 	for key_variant in tuning_cfg.keys():
@@ -218,7 +232,7 @@ func _load_runtime_configs() -> void:
 	if _spawn_profiles.is_empty():
 		_spawn_profiles["battle_default"] = _default_spawn_profile()
 
-	var build_cfg: Dictionary = DataLoaderScript.load_json(BUILD_NODES_PATH)
+	var build_cfg: Dictionary = _load_build_config()
 	_build_slot_limits = _default_build_slot_limits()
 	var slot_limits_cfg: Dictionary = build_cfg.get("slot_limits", {})
 	for slot_variant in slot_limits_cfg.keys():
@@ -248,6 +262,172 @@ func _load_runtime_configs() -> void:
 		_build_nodes_catalog.append(node)
 	if _build_nodes_catalog.is_empty():
 		_build_nodes_catalog = _default_build_nodes()
+
+func _load_spawn_config() -> Dictionary:
+	var cfg: Dictionary = DataLoaderScript.load_json(SPAWN_PROFILES_PATH)
+	if cfg.is_empty():
+		cfg = {"global_tuning": {}, "profiles": {}}
+
+	var tuning_rows: Array[Dictionary] = DataLoaderScript.load_csv_rows(SPAWN_GLOBAL_TUNING_CSV_PATH)
+	if not tuning_rows.is_empty():
+		var tuning := {}
+		for row_variant in tuning_rows:
+			var row: Dictionary = row_variant
+			var key := String(row.get("key", ""))
+			if key.is_empty():
+				continue
+			tuning[key] = _csv_parse_scalar(String(row.get("value", "")))
+		cfg["global_tuning"] = tuning
+
+	var profile_rows: Array[Dictionary] = DataLoaderScript.load_csv_rows(SPAWN_PROFILES_CSV_PATH)
+	if not profile_rows.is_empty():
+		var profiles := {}
+		for row_variant in profile_rows:
+			var row: Dictionary = row_variant
+			var profile_id := String(row.get("id", ""))
+			if profile_id.is_empty():
+				continue
+			var profile := {
+				"spawn_interval": _csv_float(row, "spawn_interval", 1.2),
+				"min_interval": _csv_float(row, "min_interval", 0.55),
+				"ramp_per_sec": _csv_float(row, "ramp_per_sec", 0.01),
+				"max_enemies": _csv_int(row, "max_enemies", 16),
+				"enemy_hp_mult": _csv_float(row, "enemy_hp_mult", 1.0),
+				"enemy_atk_mult": _csv_float(row, "enemy_atk_mult", 1.0),
+				"enemy_speed_mult": _csv_float(row, "enemy_speed_mult", 1.0),
+				"xp_per_kill": _csv_int(row, "xp_per_kill", 1),
+				"elite_hp_mult": _csv_float(row, "elite_hp_mult", 2.2),
+				"elite_xp": _csv_int(row, "elite_xp", 3),
+				"mix": _csv_json_array(String(row.get("mix_json", "[]"))),
+				"elite_spawn_at_sec": _csv_json_array(String(row.get("elite_spawn_at_sec_json", "[]")))
+			}
+			if profile.get("mix", []).is_empty():
+				profile["mix"] = [{"kind": "chaser", "weight": 100}]
+			profiles[profile_id] = profile
+		cfg["profiles"] = profiles
+
+	return cfg
+
+func _load_build_config() -> Dictionary:
+	var cfg: Dictionary = DataLoaderScript.load_json(BUILD_NODES_PATH)
+	if cfg.is_empty():
+		cfg = {"slot_limits": {}, "build_progression": {}, "synergy_rules": [], "nodes": []}
+
+	var slot_rows: Array[Dictionary] = DataLoaderScript.load_csv_rows(BUILD_SLOT_LIMITS_CSV_PATH)
+	if not slot_rows.is_empty():
+		var slot_limits := {}
+		for row_variant in slot_rows:
+			var row: Dictionary = row_variant
+			var slot := String(row.get("slot", ""))
+			if slot.is_empty():
+				continue
+			slot_limits[slot] = _csv_int(row, "limit", 0)
+		cfg["slot_limits"] = slot_limits
+
+	var progression_rows: Array[Dictionary] = DataLoaderScript.load_csv_rows(BUILD_PROGRESSION_CSV_PATH)
+	if not progression_rows.is_empty():
+		var progression := {}
+		for row_variant in progression_rows:
+			var row: Dictionary = row_variant
+			var key := String(row.get("key", ""))
+			if key.is_empty():
+				continue
+			progression[key] = _csv_parse_scalar(String(row.get("value", "")))
+		cfg["build_progression"] = progression
+
+	var synergy_rows: Array[Dictionary] = DataLoaderScript.load_csv_rows(BUILD_SYNERGIES_CSV_PATH)
+	if not synergy_rows.is_empty():
+		var rules: Array[Dictionary] = []
+		for row_variant in synergy_rows:
+			var row: Dictionary = row_variant
+			var rule_id := String(row.get("id", ""))
+			if rule_id.is_empty():
+				continue
+			rules.append({
+				"id": rule_id,
+				"label": String(row.get("label", rule_id)),
+				"required_tags": _csv_split_list(String(row.get("required_tags", ""))),
+				"effect": _csv_json_dict(String(row.get("effect_json", "{}")))
+			})
+		cfg["synergy_rules"] = rules
+
+	var node_rows: Array[Dictionary] = DataLoaderScript.load_csv_rows(BUILD_NODES_CSV_PATH)
+	if not node_rows.is_empty():
+		var nodes: Array[Dictionary] = []
+		for row_variant in node_rows:
+			var row: Dictionary = row_variant
+			var node_id := String(row.get("id", ""))
+			if node_id.is_empty():
+				continue
+			var node := {
+				"id": node_id,
+				"label": String(row.get("label", node_id)),
+				"description": String(row.get("description", "")),
+				"slot": String(row.get("slot", "passive")),
+				"tags": _csv_split_list(String(row.get("tags", ""))),
+				"required_tags": _csv_split_list(String(row.get("required_tags", ""))),
+				"tier_cost": _csv_int(row, "tier_cost", 1),
+				"weight": _csv_float(row, "weight", 1.0),
+				"max_stack": _csv_int(row, "max_stack", 1),
+				"effect": _csv_json_dict(String(row.get("effect_json", "{}")))
+			}
+			nodes.append(node)
+		cfg["nodes"] = nodes
+
+	return cfg
+
+func _csv_int(row: Dictionary, key: String, fallback: int) -> int:
+	var raw := String(row.get(key, ""))
+	return int(raw) if raw.is_valid_int() else fallback
+
+func _csv_float(row: Dictionary, key: String, fallback: float) -> float:
+	var raw := String(row.get(key, ""))
+	return float(raw) if raw.is_valid_float() else fallback
+
+func _csv_split_list(raw: String) -> Array[String]:
+	var text := raw.strip_edges()
+	if text.is_empty():
+		return []
+	var out: Array[String] = []
+	for item_variant in text.split("|", false):
+		var item := String(item_variant).strip_edges()
+		if item.is_empty():
+			continue
+		out.append(item)
+	return out
+
+func _csv_json_dict(raw: String) -> Dictionary:
+	var value: Variant = _csv_json_value(raw, {})
+	return value if typeof(value) == TYPE_DICTIONARY else {}
+
+func _csv_json_array(raw: String) -> Array:
+	var value: Variant = _csv_json_value(raw, [])
+	return value if typeof(value) == TYPE_ARRAY else []
+
+func _csv_json_value(raw: String, fallback: Variant) -> Variant:
+	var text := raw.strip_edges()
+	if text.is_empty():
+		return fallback
+	var parser := JSON.new()
+	if parser.parse(text) != OK:
+		push_warning("CSV JSON parse failed: %s" % text)
+		return fallback
+	return parser.data
+
+func _csv_parse_scalar(raw: String) -> Variant:
+	var text := raw.strip_edges()
+	if text.is_empty():
+		return ""
+	if text.is_valid_int():
+		return int(text)
+	if text.is_valid_float():
+		return float(text)
+	var lower := text.to_lower()
+	if lower == "true":
+		return true
+	if lower == "false":
+		return false
+	return text
 
 func _default_spawn_profile() -> Dictionary:
 	return {
@@ -337,7 +517,7 @@ func _default_build_nodes() -> Array[Dictionary]:
 			"label": "命脉注入",
 			"description": "生命 +4",
 			"slot": "godsend",
-			"tags": ["fate", "ritual"],
+			"tags": ["blessing", "ritual"],
 			"weight": 1.0,
 			"max_stack": 2,
 			"effect": {"hp": 4}
@@ -709,6 +889,8 @@ func _enter_room(room_id: String, spawn_from_dir: String) -> void:
 	_prayer_request_input.clear()
 	_deity_response_output.text = ""
 	_levelup_options.clear()
+	_levelup_blocked_reasons.clear()
+	_levelup_blocker_hint = ""
 	_levelup_pending = false
 	_reset_battle_room_runtime()
 	_place_player(spawn_from_dir)
@@ -996,6 +1178,7 @@ func _grant_build_budget_on_levelup() -> void:
 
 func _offer_levelup_choices() -> void:
 	var options: Array[Dictionary] = []
+	var blocked_reasons := {}
 	var room := _current_room()
 	var fixed_ids: Array = room.get("fixed_build_options", [])
 	if not fixed_ids.is_empty():
@@ -1011,10 +1194,27 @@ func _offer_levelup_choices() -> void:
 			options.append(node)
 			if options.size() >= LEVELUP_OPTION_COUNT:
 				break
+	if options.size() < LEVELUP_OPTION_COUNT:
+		var exclude_ids := {}
+		for option_node_variant in options:
+			var option_node: Dictionary = option_node_variant
+			var option_id := String(option_node.get("id", ""))
+			if not option_id.is_empty():
+				exclude_ids[option_id] = true
+		var blocked_entries := _collect_blocked_build_options(LEVELUP_OPTION_COUNT - options.size(), exclude_ids)
+		for entry_variant in blocked_entries:
+			var entry: Dictionary = entry_variant
+			var blocked_node: Dictionary = entry.get("node", {})
+			if blocked_node.is_empty():
+				continue
+			options.append(blocked_node)
+			blocked_reasons[options.size() - 1] = String(entry.get("reason", "当前不可选"))
 	if options.is_empty():
 		_append_log("当前可选构筑已耗尽（槽位/预算/前置标签或叠层达到限制）。")
 		return
 	_levelup_options = options
+	_levelup_blocked_reasons = blocked_reasons
+	_levelup_blocker_hint = _build_levelup_blocker_hint()
 	_levelup_pending = true
 	_append_log("等级提升 Lv.%d：请选择 1 个构筑（按 1/2/3 或点击按钮）。" % _run_level)
 
@@ -1122,11 +1322,86 @@ func _has_required_tags(node: Dictionary) -> bool:
 func _can_pick_node(node: Dictionary) -> bool:
 	if not _can_pick_node_by_slot(node):
 		return false
+	if _node_stack_full(node):
+		return false
 	if _node_tier_cost(node) > _build_budget_remaining():
 		return false
 	if not _has_required_tags(node):
 		return false
 	return true
+
+func _node_stack_full(node: Dictionary) -> bool:
+	var node_id := String(node.get("id", ""))
+	if node_id.is_empty():
+		return false
+	var max_stack := maxi(1, int(node.get("max_stack", 1)))
+	var owned_stack := int(_owned_build_stacks.get(node_id, 0))
+	return owned_stack >= max_stack
+
+func _node_missing_required_tags(node: Dictionary) -> Array[String]:
+	var missing: Array[String] = []
+	var required_tags: Array = node.get("required_tags", [])
+	for tag_variant in required_tags:
+		var tag := String(tag_variant)
+		if int(_owned_build_tags.get(tag, 0)) <= 0:
+			missing.append(tag)
+	return missing
+
+func _node_block_reason(node: Dictionary) -> String:
+	if _node_stack_full(node):
+		return "叠层已满"
+	if not _can_pick_node_by_slot(node):
+		var slot := _node_slot(node)
+		return "%s槽位已满(%d/%d)" % [
+			slot,
+			int(_owned_slot_counts.get(slot, 0)),
+			int(_build_slot_limits.get(slot, 0))
+		]
+	var cost := _node_tier_cost(node)
+	var remaining := _build_budget_remaining()
+	if cost > remaining:
+		return "预算不足(%d>%d)" % [cost, remaining]
+	var missing := _node_missing_required_tags(node)
+	if not missing.is_empty():
+		return "缺少标签:%s" % "/".join(missing)
+	return ""
+
+func _collect_blocked_build_options(count: int, exclude_ids: Dictionary) -> Array[Dictionary]:
+	if count <= 0:
+		return []
+	var pool: Array[Dictionary] = []
+	for node_variant in _build_nodes_catalog:
+		var node: Dictionary = node_variant
+		var node_id := String(node.get("id", ""))
+		if node_id.is_empty() or bool(exclude_ids.get(node_id, false)):
+			continue
+		var reason := _node_block_reason(node)
+		if reason.is_empty():
+			continue
+		pool.append({"node": node, "reason": reason})
+	if pool.is_empty():
+		return []
+	var result: Array[Dictionary] = []
+	while result.size() < count and not pool.is_empty():
+		var idx := _rng.randi_range(0, pool.size() - 1)
+		result.append(pool[idx])
+		pool.remove_at(idx)
+	return result
+
+func _build_levelup_blocker_hint() -> String:
+	if _levelup_blocked_reasons.is_empty():
+		return "本轮候选均可选。"
+	var unique_reasons := {}
+	for reason_variant in _levelup_blocked_reasons.values():
+		var reason := String(reason_variant)
+		if reason.is_empty():
+			continue
+		unique_reasons[reason] = true
+	var parts: Array[String] = []
+	for reason_variant in unique_reasons.keys():
+		parts.append(String(reason_variant))
+	parts.sort()
+	return "受限原因：" + "；".join(parts)
 
 func _build_pick_weight(node: Dictionary) -> float:
 	var weight := 1.0
@@ -1145,9 +1420,14 @@ func _on_build_option_pressed(index: int) -> void:
 		return
 	if index < 0 or index >= _levelup_options.size():
 		return
+	if _levelup_blocked_reasons.has(index):
+		_append_log("该构筑当前不可选：%s" % String(_levelup_blocked_reasons.get(index, "受限")))
+		return
 	var node := _levelup_options[index]
 	_apply_build_node(node)
 	_levelup_options.clear()
+	_levelup_blocked_reasons.clear()
+	_levelup_blocker_hint = ""
 	_levelup_pending = false
 
 func _apply_build_node(node: Dictionary) -> void:
@@ -1326,7 +1606,7 @@ func _generate_auto_request() -> String:
 		return "神像，请赐我钥匙以打开封印之门。"
 	if atk <= def:
 		return "神像，请赐予我更强的力量。"
-	return "神像，请赐我稳固防护与命运加护。"
+	return "神像，请赐我稳固防护。"
 
 func _choose_blessing_index_by_request(request_text: String) -> int:
 	var text := request_text.to_lower()
@@ -1338,8 +1618,6 @@ func _choose_blessing_index_by_request(request_text: String) -> int:
 		preferred_key = "atk"
 	elif text.find("防") != -1 or text.find("护") != -1 or text.find("盾") != -1:
 		preferred_key = "def"
-	elif text.find("命运") != -1 or text.find("fate") != -1:
-		preferred_key = "fate"
 	elif text.find("钥匙") != -1 or text.find("锁") != -1 or text.find("门") != -1:
 		preferred_key = "keys"
 	elif text.find("生命") != -1 or text.find("治疗") != -1 or text.find("血") != -1:
@@ -1373,9 +1651,13 @@ func _effect_summary(effect: Dictionary) -> String:
 	var parts: Array[String] = []
 	for key_variant in effect.keys():
 		var key := String(key_variant)
+		if key == "fate":
+			continue
 		var delta := int(effect.get(key, 0))
 		var sign := "+" if delta >= 0 else ""
 		parts.append("%s%s%d" % [key, sign, delta])
+	if parts.is_empty():
+		return "未产生数值变化。"
 	return "效果：" + "，".join(parts)
 
 func _refresh_prayer_panel() -> void:
@@ -1411,6 +1693,8 @@ func _apply_effect(effect: Dictionary, reason: String) -> void:
 		return
 	for key_variant in effect.keys():
 		var key: String = String(key_variant)
+		if key == "fate":
+			continue
 		var delta := int(effect.get(key, 0))
 		var before := int(_player_state.get(key, 0))
 		var after := before + delta
@@ -1441,22 +1725,23 @@ func _apply_damage_to_player(base_damage: int, reason: String) -> void:
 
 func _update_ui() -> void:
 	var room := _current_room()
-	var core_stats := "HP %d | ATK %d | DEF %d | Keys %d | Corruption %d | Fate %d | Lv %d XP %d/%d" % [
+	var core_stats := "HP %d | ATK %d | DEF %d | Keys %d | Corruption %d | Lv %d XP %d/%d" % [
 		int(_player_state.get("hp", 0)),
 		int(_player_state.get("atk", 0)),
 		int(_player_state.get("def", 0)),
 		int(_player_state.get("keys", 0)),
 		int(_player_state.get("corruption", 0)),
-		int(_player_state.get("fate", 0)),
 		_run_level,
 		_run_xp,
 		_run_xp_to_next
 	]
-	_stats_label.text = "%s\n%s" % [core_stats, _build_compact_summary()]
+	_stats_label.text = core_stats
 	_xp_bar.min_value = 0.0
 	_xp_bar.max_value = maxf(1.0, float(_run_xp_to_next))
 	_xp_bar.value = clampf(float(_run_xp), 0.0, _xp_bar.max_value)
 	_xp_bar_label.text = "经验条：%d / %d" % [_run_xp, _run_xp_to_next]
+	_build_state_label.text = _build_compact_summary()
+	_synergy_state_label.text = _build_synergy_summary()
 	var room_type := String(room.get("type", ""))
 	var room_cleared := bool(_cleared.get(_current_room_id, false))
 	if room_type == "battle" and _battle_is_survival and not room_cleared:
@@ -1667,6 +1952,20 @@ func _build_compact_summary() -> String:
 		_active_synergy_ids.size()
 	]
 
+func _build_synergy_summary() -> String:
+	if _active_synergy_ids.is_empty():
+		return "协同状态：无"
+	var labels: Array[String] = []
+	for rule_variant in _build_synergy_rules:
+		var rule: Dictionary = rule_variant
+		var rule_id := String(rule.get("id", ""))
+		if not bool(_active_synergy_ids.get(rule_id, false)):
+			continue
+		labels.append(String(rule.get("label", rule_id)))
+	if labels.is_empty():
+		return "协同状态：%d个已激活" % _active_synergy_ids.size()
+	return "协同状态：%s" % ", ".join(labels)
+
 func _top_build_tags(limit: int) -> Array[String]:
 	var items: Array[Dictionary] = []
 	for tag_variant in _owned_build_tags.keys():
@@ -1688,7 +1987,7 @@ func _refresh_levelup_panel() -> void:
 		_levelup_title_label.text = "升级选择（3选1）"
 		_levelup_panel.modulate = Color(1, 1, 1, 1)
 		return
-	_levelup_title_label.text = "升级选择（3选1）\n%s" % _build_compact_summary()
+	_levelup_title_label.text = "升级选择（3选1）\n%s\n%s" % [_build_compact_summary(), _levelup_blocker_hint]
 	if _is_tutorial_active():
 		var panel_pulse := 0.78 + 0.22 * (0.5 + 0.5 * sin(float(Time.get_ticks_msec()) * 0.014))
 		_levelup_panel.modulate = Color(1.0, 1.0, 1.0, panel_pulse)
@@ -1711,7 +2010,11 @@ func _refresh_levelup_panel() -> void:
 			var req_text := ""
 			if not req_tags.is_empty():
 				req_text = " | 前置:" + "/".join(req_tags)
-			btn.text = "%s%d) [%s|费%d] %s - %s%s%s" % [
+			var disabled_reason := String(_levelup_blocked_reasons.get(i, ""))
+			var disabled_text := ""
+			if not disabled_reason.is_empty():
+				disabled_text = " | 不可选:" + disabled_reason
+			btn.text = "%s%d) [%s|费%d] %s - %s%s%s%s" % [
 				prefix,
 				i + 1,
 				slot,
@@ -1719,10 +2022,15 @@ func _refresh_levelup_panel() -> void:
 				String(node.get("label", "构筑")),
 				String(node.get("description", "")),
 				tags_text,
-				req_text
+				req_text,
+				disabled_text
 			]
+			btn.disabled = not disabled_reason.is_empty()
+			btn.modulate = Color(0.62, 0.62, 0.62, 1.0) if btn.disabled else Color(1, 1, 1, 1)
 		else:
 			btn.visible = false
+			btn.disabled = false
+			btn.modulate = Color(1, 1, 1, 1)
 
 func _build_minimap() -> void:
 	for child in _minimap_grid.get_children():

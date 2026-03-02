@@ -6,6 +6,7 @@
 - 引擎：`Godot 4.6`
 - 默认入口：`res://scenes/DungeonRun.tscn`
 - 核心原则：`Rules-First`（规则与数据驱动，AI 仅做意图/叙事）
+- 当前约束：`Fate 字段已冻结并隐藏（不再提供选项，也不参与数值结算）`
 
 ---
 
@@ -39,10 +40,27 @@
 ## 技术栈
 
 - Godot 4.x + GDScript
-- JSON 配置（`res://data/*.json`）
+- CSV/JSON 配置（CSV 优先，JSON 兼容回退）
 - Rules-first 架构：
   - 规则层决定数值与效果。
   - AI/stub 层仅做意图 JSON 与叙事文本。
+
+---
+
+## 配置编辑（CSV 优先）
+
+运行时会优先读取 `res://data/csv/*.csv`，缺失时自动回退到 `res://data/*.json`。
+
+- 构筑配置：
+  - `data/csv/build_nodes_nodes.csv`
+  - `data/csv/build_nodes_synergy_rules.csv`
+  - `data/csv/build_nodes_slot_limits.csv`
+  - `data/csv/build_nodes_progression.csv`
+- 刷怪配置：
+  - `data/csv/spawn_profiles.csv`
+  - `data/csv/spawn_global_tuning.csv`
+
+CSV 更新后无需改代码，直接运行场景即可生效。
 
 ---
 
@@ -88,6 +106,7 @@
 - `scripts/`：玩法逻辑、规则引擎、测试
 - `data/`：房间/神明/奖励/诅咒等 JSON 数据
 - `docs/`：方案、重构说明与项目文档
+- `skills/`：本地 Codex 技能（当前含 `docs-sync-and-commit`）
 - `assets/`：字体与美术素材
 
 ---

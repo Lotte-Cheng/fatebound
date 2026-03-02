@@ -1,0 +1,14 @@
+key,value
+spawn_interval_scale,0.82
+enemy_hp_scale,1.0
+enemy_atk_scale,1.0
+enemy_speed_scale,1.0
+xp_gain_scale,1.0
+xp_orb_pickup_radius,24.0
+xp_orb_magnet_radius,186.0
+xp_orb_magnet_speed,460.0
+xp_orb_lifetime_sec,26.0
+xp_orb_drift_damp,5.2
+late_wave_start_sec,20.0
+late_wave_spawn_rate_mult,1.6
+late_wave_max_enemies_bonus,22

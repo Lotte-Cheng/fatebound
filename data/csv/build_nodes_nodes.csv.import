@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://c8i1qi5evejts"
+
+[deps]
+
+files=["res://data/csv/build_nodes_nodes.label.translation", "res://data/csv/build_nodes_nodes.description.translation", "res://data/csv/build_nodes_nodes.slot.translation", "res://data/csv/build_nodes_nodes.tags.translation", "res://data/csv/build_nodes_nodes.required.translation", "res://data/csv/build_nodes_nodes.tier.translation", "res://data/csv/build_nodes_nodes.weight.translation", "res://data/csv/build_nodes_nodes.max.translation", "res://data/csv/build_nodes_nodes.effect.translation"]
+
+source_file="res://data/csv/build_nodes_nodes.csv"
+dest_files=["res://data/csv/build_nodes_nodes.label.translation", "res://data/csv/build_nodes_nodes.description.translation", "res://data/csv/build_nodes_nodes.slot.translation", "res://data/csv/build_nodes_nodes.tags.translation", "res://data/csv/build_nodes_nodes.required.translation", "res://data/csv/build_nodes_nodes.tier.translation", "res://data/csv/build_nodes_nodes.weight.translation", "res://data/csv/build_nodes_nodes.max.translation", "res://data/csv/build_nodes_nodes.effect.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

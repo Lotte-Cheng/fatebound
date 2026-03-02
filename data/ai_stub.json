@@ -33,7 +33,7 @@
     ],
     "god_room": [
       "{entity_name}聆听你的陈述“{player_text}”。神意判定为{attitude_id}。{effect_summary}",
-      "你向{entity_name}开口：“{player_text}”。其神情显示{attitude_id}，随后命运波动。{effect_summary}"
+      "你向{entity_name}开口：“{player_text}”。其神情显示{attitude_id}，随后神性回响。{effect_summary}"
     ],
     "secret_room": [
       "你在密室前低语“{player_text}”。本次结果：{secret_outcome_cn}。{effect_summary}",

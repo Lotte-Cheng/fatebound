@@ -5,7 +5,6 @@
     "atk": 3,
     "def": 1,
     "corruption": 0,
-    "fate": 0,
     "keys": 1,
     "pending_effects": [],
     "turn": 1
@@ -15,7 +14,6 @@
     "atk": { "min": 0, "max": 12 },
     "def": { "min": 0, "max": 12 },
     "corruption": { "min": 0, "max": 20 },
-    "fate": { "min": -10, "max": 40 },
     "keys": { "min": 0, "max": 99 }
   },
   "demo_rooms": [
@@ -41,7 +39,6 @@
       "min_atk": 4,
       "min_def": 2,
       "corruption_threshold": 2,
-      "fate_threshold": 3,
       "key_drop_on_win": 1,
       "tags": ["combat", "gate_test"]
     },
@@ -70,7 +67,6 @@
       "min_atk": 5,
       "min_def": 2,
       "corruption_threshold": 3,
-      "fate_threshold": 4,
       "key_drop_on_win": 1,
       "tags": ["combat", "high_risk"]
     },
@@ -96,7 +92,6 @@
       "min_atk": 5,
       "min_def": 3,
       "corruption_threshold": 4,
-      "fate_threshold": 5,
       "key_drop_on_win": 1,
       "tags": ["combat"]
     },
@@ -134,7 +129,6 @@
       "min_atk": 6,
       "min_def": 3,
       "corruption_threshold": 5,
-      "fate_threshold": 6,
       "key_drop_on_win": 1,
       "tags": ["combat"]
     },

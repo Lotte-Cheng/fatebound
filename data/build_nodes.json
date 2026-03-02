@@ -24,10 +24,10 @@
       "effect": { "def": 1, "hp": 3 }
     },
     {
-      "id": "syn_fate_ritual",
-      "label": "命运回路",
-      "required_tags": ["fate", "ritual"],
-      "effect": { "fate": 1, "fire_rate_mult": 0.08 }
+      "id": "syn_ritual_vigor",
+      "label": "祷印回路",
+      "required_tags": ["blessing", "ritual"],
+      "effect": { "hp": 2, "fire_rate_mult": 0.08 }
     },
     {
       "id": "syn_debt_overdrive",
@@ -117,17 +117,17 @@
       }
     },
     {
-      "id": "node_fate_well",
-      "label": "命运井",
-      "description": "命运 +1，生命 +2",
+      "id": "node_blessing_well",
+      "label": "赐福井",
+      "description": "生命 +3，防御 +1",
       "slot": "godsend",
-      "tags": ["fate", "ritual"],
+      "tags": ["blessing", "ritual"],
       "tier_cost": 1,
       "weight": 0.7,
       "max_stack": 2,
       "effect": {
-        "fate": 1,
-        "hp": 2
+        "hp": 3,
+        "def": 1
       }
     },
     {
@@ -148,16 +148,16 @@
     {
       "id": "node_ritual_sigil",
       "label": "祷印回响",
-      "description": "射速 +8%，命运 +1",
+      "description": "射速 +8%，生命 +2",
       "slot": "godsend",
-      "tags": ["ritual", "fate"],
+      "tags": ["ritual", "blessing"],
       "tier_cost": 2,
       "required_tags": ["ritual"],
       "weight": 0.75,
       "max_stack": 2,
       "effect": {
         "fire_rate_mult": 0.08,
-        "fate": 1
+        "hp": 2
       }
     },
     {

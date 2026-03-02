@@ -182,12 +182,13 @@ func _build_ending_text() -> String:
 	if int(_player_state.get("hp", 0)) <= 0:
 		return "结局：殒落。你未能走出低语回廊。"
 
-	var fate := int(_player_state.get("fate", 0))
 	var corruption := int(_player_state.get("corruption", 0))
-	if corruption >= fate + 4:
+	var hp := int(_player_state.get("hp", 0))
+	var keys := int(_player_state.get("keys", 0))
+	if corruption >= 8:
 		return "结局：堕蚀同化。你被邪灵契约反噬。"
-	if fate >= corruption + 4:
-		return "结局：命运锚定。你暂时压制了低语。"
+	if hp >= 20 and corruption <= 3 and keys >= 1:
+		return "结局：誓约归还。你带着神钥与秩序离开。"
 	return "结局：代价平衡。你带着伤痕与答案离开。"
 
 func _current_room() -> Dictionary:

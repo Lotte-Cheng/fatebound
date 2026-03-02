@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://ds80jyylw152v"
+
+[deps]
+
+files=["res://data/csv/build_nodes_synergy_rules.label.translation", "res://data/csv/build_nodes_synergy_rules.required.translation", "res://data/csv/build_nodes_synergy_rules.effect.translation"]
+
+source_file="res://data/csv/build_nodes_synergy_rules.csv"
+dest_files=["res://data/csv/build_nodes_synergy_rules.label.translation", "res://data/csv/build_nodes_synergy_rules.required.translation", "res://data/csv/build_nodes_synergy_rules.effect.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

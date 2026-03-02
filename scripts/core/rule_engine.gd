@@ -293,23 +293,15 @@ func _resolve_combat_room(player_state: Dictionary, room_context: Dictionary) ->
 	var min_atk := int(room_context.get("min_atk", 0))
 	var min_def := int(room_context.get("min_def", 0))
 	var corruption_threshold := int(room_context.get("corruption_threshold", 999))
-	var fate_threshold := int(room_context.get("fate_threshold", 999))
 
 	var player_atk := int(player_state.get("atk", 0))
 	var player_def := int(player_state.get("def", 0))
 	var player_corruption := int(player_state.get("corruption", 0))
-	var player_fate := int(player_state.get("fate", 0))
 	var player_hp := int(player_state.get("hp", 0))
 
-	combat_log.append("战斗阈值：min_atk=%d min_def=%d corruption_threshold=%d fate_threshold=%d" % [min_atk, min_def, corruption_threshold, fate_threshold])
+	combat_log.append("战斗阈值：min_atk=%d min_def=%d corruption_threshold=%d" % [min_atk, min_def, corruption_threshold])
 	combat_log.append("敌人参数：enemy_hp=%d enemy_atk=%d enemy_def=%d" % [enemy_hp, enemy_atk, enemy_def])
-	combat_log.append("玩家参数：atk=%d def=%d corruption=%d fate=%d hp=%d" % [player_atk, player_def, player_corruption, player_fate, player_hp])
-
-	var atk_bonus := 0
-	if player_fate >= fate_threshold:
-		atk_bonus += 1
-		combat_log.append("fate 达标：本战玩家伤害 +1，且战后可抵消 1 次 curse")
-		tags.append("fate_advantage")
+	combat_log.append("玩家参数：atk=%d def=%d corruption=%d hp=%d" % [player_atk, player_def, player_corruption, player_hp])
 
 	var effective_enemy_atk := enemy_atk
 	if player_corruption >= corruption_threshold:
@@ -317,7 +309,7 @@ func _resolve_combat_room(player_state: Dictionary, room_context: Dictionary) ->
 		combat_log.append("corruption 超阈：敌人强化 enemy_atk +1")
 		tags.append("enemy_empowered")
 
-	var per_hit_damage := maxi(1, player_atk + atk_bonus - enemy_def)
+	var per_hit_damage := maxi(1, player_atk - enemy_def)
 	var rounds := int(ceil(float(enemy_hp) / float(maxi(per_hit_damage, 1))))
 	var extra_damage := 0
 
@@ -341,9 +333,6 @@ func _resolve_combat_room(player_state: Dictionary, room_context: Dictionary) ->
 
 	var reward_rolls := int(room_context.get("reward_rolls", 1))
 	var curse_rolls := int(room_context.get("curse_rolls", 1))
-
-	if player_fate >= fate_threshold:
-		curse_rolls = maxi(0, curse_rolls - 1)
 
 	if total_damage_to_player >= player_hp:
 		curse_rolls += 1
@@ -478,7 +467,6 @@ func _sum_effect_stack(effect_stack: Array) -> Dictionary:
 		"atk": 0,
 		"def": 0,
 		"corruption": 0,
-		"fate": 0,
 		"keys": 0
 	}
 	for entry_variant in effect_stack:
@@ -495,6 +483,8 @@ func _apply_effect_to_state(state: Dictionary, effect: Dictionary, reason: Strin
 		logs.append("%s => no numeric delta" % reason)
 		return
 	for key in effect.keys():
+		if String(key) == "fate":
+			continue
 		var delta := int(effect.get(key, 0))
 		var before := int(state.get(key, 0))
 		var after := before + delta
@@ -590,7 +580,7 @@ func _extract_effect(source: Dictionary) -> Dictionary:
 
 func _clamp_state(state: Dictionary) -> void:
 	var limits: Dictionary = _rooms_cfg.get("state_limits", {})
-	for key in ["hp", "atk", "def", "corruption", "fate", "keys"]:
+	for key in ["hp", "atk", "def", "corruption", "keys"]:
 		var lim: Dictionary = limits.get(key, {})
 		if lim.is_empty():
 			continue

@@ -1,14 +1,12 @@
 {
   "random_seed": 1337,
   "max_turns": 24,
-  "victory_fate": 18,
   "defeat_corruption": 12,
   "initial_state": {
     "hp": 24,
     "atk": 3,
     "def": 1,
     "corruption": 0,
-    "fate": 0,
     "inventory": {
       "keys": 1
     }
@@ -18,7 +16,6 @@
     "atk": { "min": 0, "max": 12 },
     "def": { "min": 0, "max": 12 },
     "corruption": { "min": 0, "max": 20 },
-    "fate": { "min": -10, "max": 40 },
     "inventory_keys": { "min": 0, "max": 99 }
   },
   "room_state_machine": {
@@ -50,22 +47,22 @@
         { "id": "mirror_guard", "name": "镜面守卫", "atk": 2, "def": 2 }
       ],
       "intent_profiles": {
-        "aggressive": { "player_attack_bonus": 2, "player_def_bonus": -1, "fate_delta": 1, "corruption_delta": 0 },
-        "defensive": { "player_attack_bonus": -1, "player_def_bonus": 2, "fate_delta": 0, "corruption_delta": 0 },
-        "devotional": { "player_attack_bonus": 0, "player_def_bonus": 1, "fate_delta": 0, "corruption_delta": 0 },
-        "questioning": { "player_attack_bonus": 0, "player_def_bonus": 0, "fate_delta": 0, "corruption_delta": 0 },
-        "greedy": { "player_attack_bonus": 1, "player_def_bonus": -1, "fate_delta": 0, "corruption_delta": 1 },
-        "deceptive": { "player_attack_bonus": 1, "player_def_bonus": 0, "fate_delta": 0, "corruption_delta": 1 }
+        "aggressive": { "player_attack_bonus": 2, "player_def_bonus": -1, "corruption_delta": 0 },
+        "defensive": { "player_attack_bonus": -1, "player_def_bonus": 2, "corruption_delta": 0 },
+        "devotional": { "player_attack_bonus": 0, "player_def_bonus": 1, "corruption_delta": 0 },
+        "questioning": { "player_attack_bonus": 0, "player_def_bonus": 0, "corruption_delta": 0 },
+        "greedy": { "player_attack_bonus": 1, "player_def_bonus": -1, "corruption_delta": 1 },
+        "deceptive": { "player_attack_bonus": 1, "player_def_bonus": 0, "corruption_delta": 1 }
       },
       "resolution": {
-        "win": { "reward_rolls": 1, "curse_rolls": 0, "fate_delta": 1, "corruption_delta": 0, "key_drop_chance": 0.35 },
-        "lose": { "reward_rolls": 0, "curse_rolls": 1, "fate_delta": -1, "corruption_delta": 1, "key_drop_chance": 0.0 },
-        "draw": { "reward_rolls": 0, "curse_rolls": 0, "fate_delta": 0, "corruption_delta": 0, "key_drop_chance": 0.15 }
+        "win": { "reward_rolls": 1, "curse_rolls": 0, "corruption_delta": 0, "key_drop_chance": 0.35 },
+        "lose": { "reward_rolls": 0, "curse_rolls": 1, "corruption_delta": 1, "key_drop_chance": 0.0 },
+        "draw": { "reward_rolls": 0, "curse_rolls": 0, "corruption_delta": 0, "key_drop_chance": 0.15 }
       },
       "reward_pool": [
         { "id": "battle_boon_atk", "type": "stat", "stat": "atk", "delta": 1, "label": "战意高涨：ATK +1", "weight": 1.0 },
         { "id": "battle_boon_def", "type": "stat", "stat": "def", "delta": 1, "label": "护甲重组：DEF +1", "weight": 1.0 },
-        { "id": "battle_boon_fate", "type": "stat", "stat": "fate", "delta": 2, "label": "胜利预兆：Fate +2", "weight": 0.8 },
+        { "id": "battle_boon_fate", "type": "stat", "stat": "hp", "delta": 2, "label": "胜利预兆：HP +2", "weight": 0.8 },
         { "id": "battle_boon_key", "type": "inventory", "item": "keys", "delta": 1, "label": "战利品钥匙：Keys +1", "weight": 0.6 }
       ],
       "curse_pool": [
@@ -78,9 +75,9 @@
       "display_name": "神明房",
       "entity_pool": ["solune", "tharos", "nyra", "murmur"],
       "attitude_table": [
-        { "id": "devoted", "min_bias": 2, "reward_rolls": 2, "curse_rolls": 0, "fate_delta": 2, "corruption_delta": 0 },
-        { "id": "neutral", "min_bias": 0, "reward_rolls": 1, "curse_rolls": 1, "fate_delta": 1, "corruption_delta": 0 },
-        { "id": "offended", "min_bias": -999, "reward_rolls": 0, "curse_rolls": 1, "fate_delta": -1, "corruption_delta": 1 }
+        { "id": "devoted", "min_bias": 2, "reward_rolls": 2, "curse_rolls": 0, "corruption_delta": 0 },
+        { "id": "neutral", "min_bias": 0, "reward_rolls": 1, "curse_rolls": 1, "corruption_delta": 0 },
+        { "id": "offended", "min_bias": -999, "reward_rolls": 0, "curse_rolls": 1, "corruption_delta": 1 }
       ]
     },
     "secret_room": {
@@ -90,26 +87,24 @@
         "consume_item": 1,
         "reward_rolls": 2,
         "curse_rolls": 0,
-        "fate_delta": 2,
         "corruption_delta": 0
       },
       "locked_resolution": {
         "reward_rolls": 0,
         "curse_rolls": 1,
-        "fate_delta": -1,
         "corruption_delta": 1
       },
       "reward_pool": [
         { "id": "secret_boon_hp", "type": "stat", "stat": "hp", "delta": 4, "label": "远古药剂：HP +4", "weight": 1.0 },
         { "id": "secret_boon_atk", "type": "stat", "stat": "atk", "delta": 1, "label": "锋刃符文：ATK +1", "weight": 1.0 },
         { "id": "secret_boon_def", "type": "stat", "stat": "def", "delta": 1, "label": "守护铭文：DEF +1", "weight": 1.0 },
-        { "id": "secret_boon_fate", "type": "stat", "stat": "fate", "delta": 3, "label": "命运碎片：Fate +3", "weight": 0.7 },
+        { "id": "secret_boon_fate", "type": "stat", "stat": "def", "delta": 2, "label": "命运碎片：DEF +2", "weight": 0.7 },
         { "id": "secret_boon_key", "type": "inventory", "item": "keys", "delta": 1, "label": "备用钥匙：Keys +1", "weight": 0.5 }
       ],
       "curse_pool": [
         { "id": "secret_curse_hp", "type": "stat", "stat": "hp", "delta": -2, "label": "机关反噬：HP -2", "weight": 1.0 },
         { "id": "secret_curse_corruption", "type": "stat", "stat": "corruption", "delta": 2, "label": "黑雾渗透：Corruption +2", "weight": 0.9 },
-        { "id": "secret_curse_fate", "type": "stat", "stat": "fate", "delta": -1, "label": "命线断裂：Fate -1", "weight": 0.8 }
+        { "id": "secret_curse_fate", "type": "stat", "stat": "hp", "delta": -2, "label": "命线断裂：HP -2", "weight": 0.8 }
       ]
     }
   }

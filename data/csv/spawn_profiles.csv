@@ -1,0 +1,6 @@
+id,spawn_interval,min_interval,ramp_per_sec,max_enemies,enemy_hp_mult,enemy_atk_mult,enemy_speed_mult,xp_per_kill,elite_hp_mult,elite_xp,mix_json,elite_spawn_at_sec_json
+battle_tutorial,1.2,0.75,0.004,5,1.00,1.00,1.00,1,1.9,2,"[{""kind"":""chaser"",""weight"":85},{""kind"":""shooter"",""weight"":15}]","[]"
+battle_stage_1,1.05,0.52,0.011,18,1.12,1.10,1.05,1,2.2,3,"[{""kind"":""chaser"",""weight"":68},{""kind"":""shooter"",""weight"":32}]","[30]"
+battle_stage_2,0.88,0.38,0.013,26,1.24,1.18,1.09,1,2.35,4,"[{""kind"":""chaser"",""weight"":58},{""kind"":""shooter"",""weight"":42}]","[24,42]"
+battle_stage_3,0.72,0.28,0.016,34,1.38,1.28,1.12,1,2.55,5,"[{""kind"":""chaser"",""weight"":48},{""kind"":""shooter"",""weight"":52}]","[18,32,48]"
+battle_final,0.56,0.20,0.018,48,1.62,1.50,1.16,2,2.9,6,"[{""kind"":""chaser"",""weight"":40},{""kind"":""shooter"",""weight"":60}]","[14,26,38,52,64]"

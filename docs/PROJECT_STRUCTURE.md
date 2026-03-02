@@ -1,12 +1,13 @@
 # Project Structure
 
-更新时间：2026-02-19
+更新时间：2026-03-02
 
 ## 1. 顶层目录
 
 - `assets/`：字体与美术资源（含 Kenney 素材）
 - `data/`：核心配置 JSON（房间、实体、奖励、诅咒、AI stub 等）
 - `docs/`：设计、分析、重构与计划文档
+- `skills/`：本地 Codex 技能目录（自动化流程）
 - `scenes/`：Godot 场景资源
 - `scripts/`：GDScript 逻辑代码（玩法、规则、UI、测试）
 - `project.godot`：Godot 项目配置（当前主场景：`res://scenes/DungeonRun.tscn`）
@@ -96,7 +97,16 @@
 /Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s res://scripts/tests/run_tests.gd --log-file ./godot-tests.log
 ```
 
-## 7. 版本管理约定
+## 7. 自动化 Skill
+
+- `skills/docs-sync-and-commit/SKILL.md`
+  - 检查“代码/数据改动是否同步文档”
+  - 统一执行 `git add .` + `git commit`
+- `skills/docs-sync-and-commit/scripts/run.sh`
+  - `--no-commit`：仅检查
+  - `-m "<message>"`：执行提交
+
+## 8. 版本管理约定
 
 - 规则：每次提交必须保持“可运行/可复现”。
 - 建议提交前执行：

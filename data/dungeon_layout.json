@@ -10,7 +10,6 @@
     "atk": 3,
     "def": 1,
     "corruption": 0,
-    "fate": 0,
     "keys": 0
   },
   "rooms": [
@@ -57,7 +56,7 @@
       "prayer_pool": [
         { "label": "战意赐福", "effect": { "atk": 1 } },
         { "label": "护身赐福", "effect": { "def": 1 } },
-        { "label": "命运赐福", "effect": { "fate": 2 } }
+        { "label": "复苏赐福", "effect": { "hp": 4 } }
       ],
       "exits": [
         { "dir": "left", "to": "r01" },
@@ -110,7 +109,7 @@
       "prayer_pool": [
         { "label": "生命赐福", "effect": { "hp": 5 } },
         { "label": "钥匙赐福", "effect": { "keys": 1 } },
-        { "label": "净化赐福", "effect": { "corruption": -2, "fate": 1 } }
+        { "label": "净化赐福", "effect": { "corruption": -2, "def": 1 } }
       ],
       "exits": [
         { "dir": "right", "to": "r02" },
@@ -143,7 +142,7 @@
       "enemy_count": 2,
       "enemy_types": ["shooter", "chaser"],
       "key_reward": 0,
-      "big_reward": { "atk": 2, "def": 1, "fate": 2, "hp": 6 },
+      "big_reward": { "atk": 2, "def": 2, "hp": 6 },
       "exits": [
         { "dir": "left", "to": "r20", "requires_key": true },
         { "dir": "right", "to": "r22" }

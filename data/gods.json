@@ -30,7 +30,7 @@
           "reward_roll_mult": 1.2,
           "curse_roll_mult": 1.0,
           "corruption_delta_bonus": 0,
-          "reward_tag_bias": { "key": 1.2, "fate": 1.1 },
+          "reward_tag_bias": { "key": 1.2, "defense": 1.1 },
           "curse_tag_bias": { "contract": 2.0 },
           "forced_curse_ids": ["curse_pact_debt"]
         },
@@ -125,7 +125,7 @@
           "curse_roll_mult": 1.7,
           "corruption_delta_bonus": 1,
           "reward_tag_bias": { "high_risk": 1.3 },
-          "curse_tag_bias": { "fate_loss": 1.5, "corruption": 1.4 },
+          "curse_tag_bias": { "hp_loss": 1.5, "corruption": 1.4 },
           "forced_curse_ids": ["curse_abyss_twist"]
         }
       }
