@@ -1471,10 +1471,13 @@ func _build_budget_remaining() -> int:
 	return maxi(0, _build_budget_total - _build_budget_spent)
 
 func _has_required_tags(node: Dictionary) -> bool:
-	var required_tags: Array = node.get("required_tags", [])
-	for tag_variant in required_tags:
+	var required_counts := _required_tag_counts(node)
+	for tag_variant in required_counts.keys():
 		var tag := String(tag_variant)
-		if int(_owned_build_tags.get(tag, 0)) <= 0:
+		var required := int(required_counts.get(tag, 0))
+		if required <= 0:
+			continue
+		if int(_owned_build_tags.get(tag, 0)) < required:
 			return false
 	return true
 
@@ -1499,12 +1502,32 @@ func _node_stack_full(node: Dictionary) -> bool:
 
 func _node_missing_required_tags(node: Dictionary) -> Array[String]:
 	var missing: Array[String] = []
-	var required_tags: Array = node.get("required_tags", [])
-	for tag_variant in required_tags:
+	var required_counts := _required_tag_counts(node)
+	for tag_variant in required_counts.keys():
 		var tag := String(tag_variant)
-		if int(_owned_build_tags.get(tag, 0)) <= 0:
-			missing.append(tag)
+		var required := int(required_counts.get(tag, 0))
+		if required <= 0:
+			continue
+		var owned := int(_owned_build_tags.get(tag, 0))
+		if owned < required:
+			missing.append("%s(%d/%d)" % [tag, owned, required])
 	return missing
+
+func _required_tag_counts(entry: Dictionary) -> Dictionary:
+	var counts := {}
+	for tag_variant in entry.get("required_tags", []):
+		var tag := String(tag_variant)
+		if tag.is_empty():
+			continue
+		counts[tag] = int(counts.get(tag, 0)) + 1
+	var explicit_counts: Dictionary = entry.get("required_tag_counts", {})
+	for tag_variant in explicit_counts.keys():
+		var tag := String(tag_variant)
+		if tag.is_empty():
+			continue
+		var required := maxi(0, int(explicit_counts.get(tag, 0)))
+		counts[tag] = maxi(int(counts.get(tag, 0)), required)
+	return counts
 
 func _node_block_reason(node: Dictionary) -> String:
 	if _node_stack_full(node):
@@ -1639,6 +1662,34 @@ func _apply_build_effect_bundle(effect: Dictionary, reason: String) -> void:
 				var before_damage := int(_build_modifiers.get("bullet_damage_bonus", 0))
 				_build_modifiers["bullet_damage_bonus"] = before_damage + int(effect.get(key, 0))
 				modifier_logs.append("bullet_damage_bonus %d -> %d" % [before_damage, int(_build_modifiers.get("bullet_damage_bonus", 0))])
+			"pierce_count":
+				var before_pierce := int(_build_modifiers.get("pierce_count", 0))
+				_build_modifiers["pierce_count"] = maxi(0, before_pierce + int(effect.get(key, 0)))
+				modifier_logs.append("pierce_count %d -> %d" % [before_pierce, int(_build_modifiers.get("pierce_count", 0))])
+			"xp_mult":
+				var before_xp_mult := float(_build_modifiers.get("xp_mult", 0.0))
+				_build_modifiers["xp_mult"] = maxf(-0.95, before_xp_mult + float(effect.get(key, 0.0)))
+				modifier_logs.append("xp_mult %.2f -> %.2f" % [before_xp_mult, float(_build_modifiers.get("xp_mult", 0.0))])
+			"pickup_radius_bonus":
+				var before_pickup := float(_build_modifiers.get("pickup_radius_bonus", 0.0))
+				_build_modifiers["pickup_radius_bonus"] = maxf(0.0, before_pickup + float(effect.get(key, 0.0)))
+				modifier_logs.append("pickup_radius_bonus %.1f -> %.1f" % [before_pickup, float(_build_modifiers.get("pickup_radius_bonus", 0.0))])
+			"crit_chance":
+				var before_crit_chance := float(_build_modifiers.get("crit_chance", 0.0))
+				_build_modifiers["crit_chance"] = clampf(before_crit_chance + float(effect.get(key, 0.0)), 0.0, 1.0)
+				modifier_logs.append("crit_chance %.2f -> %.2f" % [before_crit_chance, float(_build_modifiers.get("crit_chance", 0.0))])
+			"crit_mult":
+				var before_crit_mult := float(_build_modifiers.get("crit_mult", 0.5))
+				_build_modifiers["crit_mult"] = maxf(0.0, before_crit_mult + float(effect.get(key, 0.0)))
+				modifier_logs.append("crit_mult %.2f -> %.2f" % [before_crit_mult, float(_build_modifiers.get("crit_mult", 0.5))])
+			"lifesteal":
+				var before_lifesteal := float(_build_modifiers.get("lifesteal", 0.0))
+				_build_modifiers["lifesteal"] = maxf(0.0, before_lifesteal + float(effect.get(key, 0.0)))
+				modifier_logs.append("lifesteal %.2f -> %.2f" % [before_lifesteal, float(_build_modifiers.get("lifesteal", 0.0))])
+			"bullet_size_mult":
+				var before_bullet_size := float(_build_modifiers.get("bullet_size_mult", 0.0))
+				_build_modifiers["bullet_size_mult"] = maxf(0.0, before_bullet_size + float(effect.get(key, 0.0)))
+				modifier_logs.append("bullet_size_mult %.2f -> %.2f" % [before_bullet_size, float(_build_modifiers.get("bullet_size_mult", 0.0))])
 			_:
 				direct_effect[key] = effect.get(key)
 	if not modifier_logs.is_empty():
@@ -1659,20 +1710,23 @@ func _try_activate_build_synergies() -> void:
 		var rule_id := String(rule.get("id", ""))
 		if rule_id.is_empty() or bool(_active_synergy_ids.get(rule_id, false)):
 			continue
-		var required_tags: Array = rule.get("required_tags", [])
-		if required_tags.is_empty():
+		var required_counts := _required_tag_counts(rule)
+		if required_counts.is_empty():
 			continue
 		var all_hit := true
-		for tag_variant in required_tags:
+		var requirement_labels: Array[String] = []
+		for tag_variant in required_counts.keys():
 			var req_tag := String(tag_variant)
-			if int(_owned_build_tags.get(req_tag, 0)) <= 0:
+			var req_count := int(required_counts.get(req_tag, 0))
+			requirement_labels.append("%s×%d" % [req_tag, req_count])
+			if int(_owned_build_tags.get(req_tag, 0)) < req_count:
 				all_hit = false
 				break
 		if not all_hit:
 			continue
 		_active_synergy_ids[rule_id] = true
 		var label := String(rule.get("label", rule_id))
-		_append_log("构筑协同激活：%s（需求:%s）" % [label, ", ".join(required_tags)])
+		_append_log("构筑协同激活：%s（需求:%s）" % [label, ", ".join(requirement_labels)])
 		_apply_build_effect_bundle(rule.get("effect", {}), "协同：%s" % label)
 
 func _on_room_cleared() -> void:
@@ -1866,7 +1920,6 @@ func _run_dialogue_turn(state: Dictionary, request_text: String) -> void:
 		narrative_rsp = {"text": _narrative_generator.generate_narrative(god_cfg, resolution, request_text), "warnings": []}
 	var narrative_text := String(narrative_rsp.get("text", "神明沉默。"))
 	_append_chat_line("%s（第%d/%d轮）" % [String(state.get("deity_name", "神明")), turn_index, max_turns], narrative_text)
-	_append_effect_summary(resolution)
 
 	for warn_variant in narrative_rsp.get("warnings", []):
 		_append_log("AI叙事降级提示：%s" % String(warn_variant))
@@ -2019,58 +2072,6 @@ func _append_chat_line(speaker: String, text: String) -> void:
 		_deity_response_output.text += "\n"
 	_deity_response_output.text += "%s：%s" % [speaker, line]
 	_deity_response_output.scroll_to_line(maxi(0, _deity_response_output.get_line_count() - 1))
-
-func _append_effect_summary(resolution: Dictionary) -> void:
-	var parts: Array[String] = []
-	for reward_id_variant in resolution.get("reward_ids", []):
-		var reward_id := String(reward_id_variant)
-		var label := _get_reward_label(reward_id)
-		parts.append("+%s" % label)
-	for curse_id_variant in resolution.get("curse_ids", []):
-		var curse_id := String(curse_id_variant)
-		var label := _get_curse_label(curse_id)
-		parts.append("-%s" % label)
-	var delta: Dictionary = resolution.get("delta_preview", {})
-	var stat_parts: Array[String] = []
-	for key in ["hp", "atk", "def", "keys", "corruption"]:
-		var val := int(delta.get(key, 0))
-		if val == 0:
-			continue
-		var display_name := _stat_display_name(key)
-		var sign := "+" if val > 0 else ""
-		stat_parts.append("%s%s%d" % [display_name, sign, val])
-	if not stat_parts.is_empty():
-		parts.append(" ".join(stat_parts))
-	if parts.is_empty():
-		return
-	var summary := "【效果】" + " | ".join(parts)
-	if not _deity_response_output.text.is_empty():
-		_deity_response_output.text += "\n"
-	_deity_response_output.text += summary
-	_deity_response_output.scroll_to_line(maxi(0, _deity_response_output.get_line_count() - 1))
-
-func _get_reward_label(reward_id: String) -> String:
-	for reward_variant in _reward_cfg.get("rewards", []):
-		var reward: Dictionary = reward_variant
-		if String(reward.get("id", "")) == reward_id:
-			return String(reward.get("label", reward_id))
-	return reward_id
-
-func _get_curse_label(curse_id: String) -> String:
-	for curse_variant in _curse_cfg.get("curses", []):
-		var curse: Dictionary = curse_variant
-		if String(curse.get("id", "")) == curse_id:
-			return String(curse.get("label", curse_id))
-	return curse_id
-
-func _stat_display_name(key: String) -> String:
-	match key:
-		"hp": return "HP"
-		"atk": return "ATK"
-		"def": return "DEF"
-		"keys": return "钥匙"
-		"corruption": return "腐化"
-		_: return key
 
 func _apply_reward_combat_effects(reward_ids: Array) -> void:
 	for reward_id_variant in reward_ids:
