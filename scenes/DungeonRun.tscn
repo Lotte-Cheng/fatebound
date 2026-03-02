@@ -72,11 +72,17 @@ theme_override_constants/separation = 4
 
 [node name="PrayerTitle" type="Label" parent="CanvasLayer/HudPanel/VBox/PrayerPanel"]
 layout_mode = 2
-text = "祝福神像"
+text = "神明交流"
+
+[node name="DeityResponseOutput" type="RichTextLabel" parent="CanvasLayer/HudPanel/VBox/PrayerPanel"]
+custom_minimum_size = Vector2(0, 140)
+layout_mode = 2
+scroll_active = true
+selection_enabled = true
 
 [node name="PrayerRequestInput" type="LineEdit" parent="CanvasLayer/HudPanel/VBox/PrayerPanel"]
 layout_mode = 2
-placeholder_text = "输入请求（例如：赐我力量、请给钥匙、治疗我）"
+placeholder_text = "输入你想对神明说的话"
 
 [node name="PrayerButtonRow" type="HBoxContainer" parent="CanvasLayer/HudPanel/VBox/PrayerPanel"]
 layout_mode = 2
@@ -84,37 +90,80 @@ theme_override_constants/separation = 6
 
 [node name="AutoRequestButton" type="Button" parent="CanvasLayer/HudPanel/VBox/PrayerPanel/PrayerButtonRow"]
 layout_mode = 2
-text = "自动生成请求"
+text = "自动填充请求"
 
 [node name="AskStatueButton" type="Button" parent="CanvasLayer/HudPanel/VBox/PrayerPanel/PrayerButtonRow"]
 layout_mode = 2
-text = "按请求祈祷"
+text = "发送请求"
+
+[node name="RitualStatusLabel" type="Label" parent="CanvasLayer/HudPanel/VBox/PrayerPanel"]
+layout_mode = 2
+autowrap_mode = 3
+text = "靠近神像后可直接进行3轮神明对话。"
+
+[node name="TurnStatusLabel" type="Label" parent="CanvasLayer/HudPanel/VBox/PrayerPanel"]
+layout_mode = 2
+autowrap_mode = 3
+text = "对话轮次：0/3 | AI:stub"
+
+[node name="AiLoadingLabel" type="Label" parent="CanvasLayer/HudPanel/VBox/PrayerPanel"]
+layout_mode = 2
+text = ""
+visible = false
+
+[node name="StanceRow" type="HBoxContainer" parent="CanvasLayer/HudPanel/VBox/PrayerPanel"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="StanceRestraintButton" type="Button" parent="CanvasLayer/HudPanel/VBox/PrayerPanel/StanceRow"]
+layout_mode = 2
+text = "[克制] restraint"
+
+[node name="StancePactButton" type="Button" parent="CanvasLayer/HudPanel/VBox/PrayerPanel/StanceRow"]
+layout_mode = 2
+text = "[契约] pact"
+
+[node name="StanceBlasphemyButton" type="Button" parent="CanvasLayer/HudPanel/VBox/PrayerPanel/StanceRow"]
+layout_mode = 2
+text = "[亵渎] blasphemy"
 
 [node name="OptionTitle" type="Label" parent="CanvasLayer/HudPanel/VBox/PrayerPanel"]
+visible = false
 layout_mode = 2
-text = "或直接选择祝福："
+text = "建议表达（点击填入输入框）："
 
 [node name="BlessOptionA" type="Button" parent="CanvasLayer/HudPanel/VBox/PrayerPanel"]
+visible = false
 layout_mode = 2
 text = "祝福 A"
 
 [node name="BlessOptionB" type="Button" parent="CanvasLayer/HudPanel/VBox/PrayerPanel"]
+visible = false
 layout_mode = 2
 text = "祝福 B"
 
 [node name="BlessOptionC" type="Button" parent="CanvasLayer/HudPanel/VBox/PrayerPanel"]
+visible = false
 layout_mode = 2
 text = "祝福 C"
 
-[node name="DeityResponseTitle" type="Label" parent="CanvasLayer/HudPanel/VBox/PrayerPanel"]
+[node name="IntentPreviewLabel" type="Label" parent="CanvasLayer/HudPanel/VBox/PrayerPanel"]
+visible = false
 layout_mode = 2
-text = "神像回应"
+autowrap_mode = 3
+text = "意图JSON：{}"
 
-[node name="DeityResponseOutput" type="RichTextLabel" parent="CanvasLayer/HudPanel/VBox/PrayerPanel"]
-custom_minimum_size = Vector2(0, 84)
+[node name="ResolutionPreviewLabel" type="Label" parent="CanvasLayer/HudPanel/VBox/PrayerPanel"]
+visible = false
 layout_mode = 2
-scroll_active = true
-selection_enabled = true
+autowrap_mode = 3
+text = "规则结算：{}"
+
+[node name="DeityResponseTitle" type="Label" parent="CanvasLayer/HudPanel/VBox/PrayerPanel"]
+visible = false
+layout_mode = 2
+text = "神明回应（文本不新增效果）"
 
 [node name="LevelUpPanel" type="VBoxContainer" parent="CanvasLayer/HudPanel/VBox"]
 visible = false

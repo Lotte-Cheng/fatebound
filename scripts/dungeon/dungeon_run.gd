@@ -1,9 +1,19 @@
 extends Node2D
 
 const DataLoaderScript = preload("res://scripts/data_loader.gd")
+const FateRuleEngineScript = preload("res://scripts/core/rule_engine.gd")
+const IntentParserScript = preload("res://scripts/core/intent_parser.gd")
+const NarrativeGeneratorScript = preload("res://scripts/core/narrative_generator.gd")
+const DialogueAIGatewayScript = preload("res://scripts/ai/dialogue_ai_gateway.gd")
 const DUNGEON_PATH := "res://data/dungeon_layout.json"
 const SPAWN_PROFILES_PATH := "res://data/spawn_profiles.json"
 const BUILD_NODES_PATH := "res://data/build_nodes.json"
+const GODS_PATH := "res://data/gods.json"
+const REWARDS_PATH := "res://data/rewards.json"
+const CURSES_PATH := "res://data/curses.json"
+const ROOMS_PATH := "res://data/rooms.json"
+const DIALOGUE_CONFIG_PATH := "res://data/dialogue_config.json"
+const AI_PROVIDER_PATH := "res://data/ai_provider.json"
 const SPAWN_GLOBAL_TUNING_CSV_PATH := "res://data/csv/spawn_global_tuning.csv"
 const SPAWN_PROFILES_CSV_PATH := "res://data/csv/spawn_profiles.csv"
 const BUILD_SLOT_LIMITS_CSV_PATH := "res://data/csv/build_nodes_slot_limits.csv"
@@ -46,9 +56,14 @@ const GUIDE_ARROW_WOBBLE := 10.0
 @onready var _prayer_request_input: LineEdit = $CanvasLayer/HudPanel/VBox/PrayerPanel/PrayerRequestInput
 @onready var _auto_request_button: Button = $CanvasLayer/HudPanel/VBox/PrayerPanel/PrayerButtonRow/AutoRequestButton
 @onready var _ask_statue_button: Button = $CanvasLayer/HudPanel/VBox/PrayerPanel/PrayerButtonRow/AskStatueButton
+@onready var _ritual_status_label: Label = $CanvasLayer/HudPanel/VBox/PrayerPanel/RitualStatusLabel
+@onready var _turn_status_label: Label = $CanvasLayer/HudPanel/VBox/PrayerPanel/TurnStatusLabel
+@onready var _ai_loading_label: Label = $CanvasLayer/HudPanel/VBox/PrayerPanel/AiLoadingLabel
 @onready var _bless_option_a: Button = $CanvasLayer/HudPanel/VBox/PrayerPanel/BlessOptionA
 @onready var _bless_option_b: Button = $CanvasLayer/HudPanel/VBox/PrayerPanel/BlessOptionB
 @onready var _bless_option_c: Button = $CanvasLayer/HudPanel/VBox/PrayerPanel/BlessOptionC
+@onready var _intent_preview_label: Label = $CanvasLayer/HudPanel/VBox/PrayerPanel/IntentPreviewLabel
+@onready var _resolution_preview_label: Label = $CanvasLayer/HudPanel/VBox/PrayerPanel/ResolutionPreviewLabel
 @onready var _deity_response_output: RichTextLabel = $CanvasLayer/HudPanel/VBox/PrayerPanel/DeityResponseOutput
 @onready var _levelup_panel: VBoxContainer = $CanvasLayer/HudPanel/VBox/LevelUpPanel
 @onready var _levelup_title_label: Label = $CanvasLayer/HudPanel/VBox/LevelUpPanel/LevelUpTitle
@@ -75,6 +90,20 @@ var _build_nodes_catalog: Array[Dictionary] = []
 var _build_slot_limits := {}
 var _build_progression_cfg := {}
 var _build_synergy_rules: Array[Dictionary] = []
+var _god_cfg_by_id: Dictionary = {}
+var _reward_cfg: Dictionary = {}
+var _curse_cfg: Dictionary = {}
+var _dialogue_cfg: Dictionary = {}
+var _ai_provider_cfg: Dictionary = {}
+var _communion_state_by_room: Dictionary = {}
+var _dialogue_history_by_room: Dictionary = {}
+var _dialogue_request_in_flight := false
+var _dialogue_loading_elapsed := 0.0
+var _run_turn_counter := 1
+var _fate_rule_engine = null
+var _intent_parser = null
+var _narrative_generator = null
+var _ai_gateway = null
 
 var _player_state: Dictionary = {}
 var _player_pos := Vector2.ZERO
@@ -167,6 +196,11 @@ func _boot_new_run() -> void:
 	_xp_orbs.clear()
 	_enemies.clear()
 	_logs.clear()
+	_communion_state_by_room.clear()
+	_dialogue_history_by_room.clear()
+	_dialogue_request_in_flight = false
+	_dialogue_loading_elapsed = 0.0
+	_run_turn_counter = 1
 	_deity_response_output.text = ""
 	_levelup_options.clear()
 	_levelup_blocked_reasons.clear()
@@ -175,6 +209,7 @@ func _boot_new_run() -> void:
 	_reset_battle_room_runtime()
 	_reset_tutorial_runtime()
 	_load_runtime_configs()
+	_setup_deity_systems(int(cfg.get("seed", 1)))
 	_reset_build_runtime()
 
 	_map_cols = int((cfg.get("grid", {}) as Dictionary).get("cols", 3))
@@ -183,6 +218,8 @@ func _boot_new_run() -> void:
 	_player_state = (cfg.get("initial_state", {}) as Dictionary).duplicate(true)
 	# Fate is deprecated in the action-loop prototype. Keep field absent to avoid UI/log noise.
 	_player_state.erase("fate")
+	_player_state["turn"] = _run_turn_counter
+	_player_state["pending_effects"] = _player_state.get("pending_effects", [])
 	_player_state["hp"] = maxi(1, int(_player_state.get("hp", 20)))
 
 	for room_variant in cfg.get("rooms", []):
@@ -262,6 +299,56 @@ func _load_runtime_configs() -> void:
 		_build_nodes_catalog.append(node)
 	if _build_nodes_catalog.is_empty():
 		_build_nodes_catalog = _default_build_nodes()
+
+func _setup_deity_systems(seed: int) -> void:
+	var gods_cfg: Dictionary = DataLoaderScript.load_json(GODS_PATH)
+	var rewards_cfg: Dictionary = DataLoaderScript.load_json(REWARDS_PATH)
+	var curses_cfg: Dictionary = DataLoaderScript.load_json(CURSES_PATH)
+	var rooms_cfg: Dictionary = DataLoaderScript.load_json(ROOMS_PATH)
+	_dialogue_cfg = DataLoaderScript.load_json(DIALOGUE_CONFIG_PATH)
+	_ai_provider_cfg = DataLoaderScript.load_json(AI_PROVIDER_PATH)
+
+	if _dialogue_cfg.is_empty():
+		_dialogue_cfg = _default_dialogue_config()
+	if _ai_provider_cfg.is_empty():
+		_ai_provider_cfg = {"provider": "stub"}
+
+	_god_cfg_by_id.clear()
+	for god_variant in gods_cfg.get("gods", []):
+		var god: Dictionary = god_variant
+		var god_id := String(god.get("id", ""))
+		if not god_id.is_empty():
+			_god_cfg_by_id[god_id] = god
+
+	_reward_cfg = rewards_cfg.duplicate(true)
+	_curse_cfg = curses_cfg.duplicate(true)
+
+	_fate_rule_engine = FateRuleEngineScript.new()
+	_fate_rule_engine.setup(gods_cfg, rewards_cfg, curses_cfg, rooms_cfg)
+	_intent_parser = IntentParserScript.new()
+	_narrative_generator = NarrativeGeneratorScript.new()
+
+	if _ai_gateway != null and is_instance_valid(_ai_gateway):
+		_ai_gateway.queue_free()
+	_ai_gateway = DialogueAIGatewayScript.new()
+	add_child(_ai_gateway)
+	_ai_gateway.setup(_ai_provider_cfg, _intent_parser, _narrative_generator, seed)
+
+func _default_dialogue_config() -> Dictionary:
+	return {
+		"max_turns": 3,
+		"suggestion_count": 3,
+		"base_reward_rolls": 1,
+		"base_curse_rolls": 1,
+		"reward_chance_curve": [0.7, 0.85, 1.0],
+		"curse_chance_curve": [0.45, 0.65, 0.8],
+		"show_rule_logs": false,
+		"suggestion_templates": [
+			"请赐我当前最需要的生存能力。",
+			"请给我代价可承受的稳定增益。",
+			"请告诉我如何以最小损失通过下一房间。"
+		]
+	}
 
 func _load_spawn_config() -> Dictionary:
 	var cfg: Dictionary = DataLoaderScript.load_json(SPAWN_PROFILES_PATH)
@@ -569,6 +656,8 @@ func _process(delta: float) -> void:
 	_shoot_cooldown = maxf(0.0, _shoot_cooldown - delta)
 	_touch_hit_cooldown = maxf(0.0, _touch_hit_cooldown - delta)
 	_door_cooldown = maxf(0.0, _door_cooldown - delta)
+	if _dialogue_request_in_flight:
+		_dialogue_loading_elapsed += delta
 
 	if _game_over:
 		_update_ui()
@@ -884,7 +973,10 @@ func _try_room_transition() -> void:
 func _enter_room(room_id: String, spawn_from_dir: String) -> void:
 	if not _rooms_by_id.has(room_id):
 		return
+	if not _current_room_id.is_empty() and room_id != _current_room_id:
+		_run_turn_counter += 1
 	_current_room_id = room_id
+	_player_state["turn"] = _run_turn_counter
 	_visited[room_id] = true
 	_prayer_request_input.clear()
 	_deity_response_output.text = ""
@@ -903,6 +995,8 @@ func _enter_room(room_id: String, spawn_from_dir: String) -> void:
 		_append_log("教学开始：1) WASD移动离开光圈 2) 左键开火3次 3) 击败怪物升级 4) 选择1个构筑。")
 	else:
 		_reset_tutorial_runtime()
+	if String(_current_room().get("type", "")) == "prayer":
+		_ensure_communion_state(room_id)
 	_spawn_room_entities()
 	_update_minimap()
 	_append_log("进入房间：%s" % String(_current_room().get("name", room_id)))
@@ -1536,7 +1630,7 @@ func _on_room_cleared() -> void:
 
 	_append_log("房间已清空：可通过门选择下一条路径。")
 	if String(room.get("type", "")) == "prayer" and not bool(_prayed.get(_current_room_id, false)):
-		_append_log("这是祈福房：靠近神像后可输入请求并祈祷。")
+		_append_log("这是祈福房：靠近神像后可直接进行3轮神明对话。")
 
 	if _current_room_id == "r22":
 		_victory = true
@@ -1546,54 +1640,222 @@ func _on_room_cleared() -> void:
 func _on_pray_pressed() -> void:
 	if not _can_pray_current_room():
 		return
-	_on_auto_request_pressed()
-	_on_ask_statue_pressed()
+	if _prayer_request_input.text.strip_edges().is_empty():
+		_prayer_request_input.text = _generate_auto_request()
+	await _on_ask_statue_pressed()
 
 func _on_auto_request_pressed() -> void:
 	if not _can_pray_current_room():
 		return
-	_prayer_request_input.text = _generate_auto_request()
+	var state := _ensure_communion_state(_current_room_id)
+	var suggestions: Array = state.get("suggestions", [])
+	if suggestions.is_empty():
+		suggestions = _build_dialogue_suggestions(state)
+		state["suggestions"] = suggestions
+		_communion_state_by_room[_current_room_id] = state
+	if not suggestions.is_empty():
+		_prayer_request_input.text = String(suggestions[0])
+	else:
+		_prayer_request_input.text = _generate_auto_request()
 
 func _on_ask_statue_pressed() -> void:
 	if not _can_pray_current_room():
+		return
+	if _dialogue_request_in_flight:
+		return
+	var state := _ensure_communion_state(_current_room_id)
+	if bool(state.get("dialogue_finished", false)):
+		_append_log("本房神明对话已完成。")
 		return
 	var request_text := _prayer_request_input.text.strip_edges()
 	if request_text.is_empty():
 		request_text = _generate_auto_request()
 		_prayer_request_input.text = request_text
-	var idx := _choose_blessing_index_by_request(request_text)
-	_apply_prayer_choice(idx, request_text)
+	_dialogue_loading_elapsed = 0.0
+	_dialogue_request_in_flight = true
+	_refresh_prayer_panel()
+	await _run_dialogue_turn(state, request_text)
+	_dialogue_request_in_flight = false
+	_dialogue_loading_elapsed = 0.0
+	_refresh_prayer_panel()
 
 func _on_bless_option_pressed(index: int) -> void:
 	if not _can_pray_current_room():
 		return
-	var pool := _current_prayer_pool()
-	if index < 0 or index >= pool.size():
+	var state := _ensure_communion_state(_current_room_id)
+	var suggestions: Array = state.get("suggestions", [])
+	if index < 0 or index >= suggestions.size():
 		return
-	var blessing: Dictionary = pool[index]
-	var request_text := _prayer_request_input.text.strip_edges()
-	if request_text.is_empty():
-		request_text = "请赐予我%s。" % String(blessing.get("label", "祝福"))
-		_prayer_request_input.text = request_text
-	_apply_prayer_choice(index, request_text)
+	_prayer_request_input.text = String(suggestions[index])
 
-func _apply_prayer_choice(index: int, request_text: String) -> void:
-	var pool := _current_prayer_pool()
-	if index < 0 or index >= pool.size():
-		return
-	var blessing: Dictionary = pool[index]
-	var room := _current_room()
-	_apply_effect(blessing.get("effect", {}), "祈祷：%s" % String(blessing.get("label", "未知赐福")))
-	_prayed[_current_room_id] = true
+func _ensure_communion_state(room_id: String) -> Dictionary:
+	var state: Dictionary = _communion_state_by_room.get(room_id, {})
+	if not state.is_empty():
+		return state
 
+	var room: Dictionary = _rooms_by_id.get(room_id, {})
+	var god_id := _guess_god_id_for_room(room)
 	var deity_name := String(room.get("deity_name", "无名神像"))
-	var response := _build_deity_response(deity_name, request_text, blessing)
-	_deity_response_output.text = response
-	_append_log(response)
+	var base_suggestions := _build_default_dialogue_suggestions(deity_name)
 
-func _current_prayer_pool() -> Array:
-	var room := _current_room()
-	return room.get("prayer_pool", [])
+	state = {
+		"room_id": room_id,
+		"deity_name": deity_name,
+		"god_id": god_id,
+		"dialogue_turn": 0,
+		"max_turns": maxi(1, int(_dialogue_cfg.get("max_turns", 3))),
+		"dialogue_finished": false,
+		"turn_results": [],
+		"suggestions": base_suggestions
+	}
+	_communion_state_by_room[room_id] = state
+	return state
+
+func _guess_god_id_for_room(room: Dictionary) -> String:
+	var explicit_id := String(room.get("god_id", ""))
+	if not explicit_id.is_empty():
+		return explicit_id
+	var deity_name := String(room.get("deity_name", ""))
+	for god_id_variant in _god_cfg_by_id.keys():
+		var god_id := String(god_id_variant)
+		var cfg: Dictionary = _god_cfg_by_id[god_id]
+		if String(cfg.get("name", "")) == deity_name:
+			return god_id
+	return "solune"
+
+func _build_default_dialogue_suggestions(deity_name: String) -> Array[String]:
+	return [
+		"%s，请赐我当前最需要的生存能力。" % deity_name,
+		"%s，请给我可承受代价下的稳定增益。" % deity_name,
+		"%s，请告诉我如何以最小损失通过下一房间。" % deity_name
+	]
+
+func _build_dialogue_suggestions(state: Dictionary) -> Array[String]:
+	var god_cfg: Dictionary = _god_cfg_by_id.get(String(state.get("god_id", "")), {})
+	var deity_name := String(state.get("deity_name", "神明"))
+	var count := maxi(1, int(_dialogue_cfg.get("suggestion_count", 3)))
+	if _ai_gateway == null:
+		return _build_default_dialogue_suggestions(deity_name)
+	return _ai_gateway.suggest_requests(god_cfg, _player_state, _dialogue_cfg, count, "restraint")
+
+func _run_dialogue_turn(state: Dictionary, request_text: String) -> void:
+	var turn_index := int(state.get("dialogue_turn", 0)) + 1
+	var max_turns := int(state.get("max_turns", 3))
+	if turn_index > max_turns:
+		state["dialogue_finished"] = true
+		_prayed[_current_room_id] = true
+		_communion_state_by_room[_current_room_id] = state
+		return
+
+	var parser_context := {
+		"room_id": _current_room_id,
+		"god_id": state.get("god_id", ""),
+		"turn_index": turn_index,
+		"retry_count": int(_dialogue_cfg.get("openai_retry_count", 1))
+	}
+	var intent_rsp: Dictionary = {}
+	if _ai_gateway != null:
+		intent_rsp = await _ai_gateway.parse_intent(request_text, parser_context)
+	else:
+		intent_rsp = {"intent": _intent_parser.parse_intent(request_text), "warnings": []}
+	var intent_json: Dictionary = intent_rsp.get("intent", {})
+	intent_json["stance"] = "restraint"
+	intent_json["target"] = String(state.get("god_id", ""))
+
+	for warn_variant in intent_rsp.get("warnings", []):
+		_append_log("AI意图降级提示：%s" % String(warn_variant))
+	_append_chat_line("你", request_text)
+
+	var reward_rolls := int(_dialogue_cfg.get("base_reward_rolls", 1))
+	var curse_rolls := int(_dialogue_cfg.get("base_curse_rolls", 1))
+	var reward_curve: Array = _dialogue_cfg.get("reward_chance_curve", [1.0])
+	var curse_curve: Array = _dialogue_cfg.get("curse_chance_curve", [1.0])
+	if _rng.randf() > _curve_value(reward_curve, turn_index - 1, 1.0):
+		reward_rolls = 0
+	if _rng.randf() > _curve_value(curse_curve, turn_index - 1, 1.0):
+		curse_rolls = 0
+	_run_turn_counter += 1
+	_player_state["turn"] = _run_turn_counter
+
+	var room_context := {
+		"id": "%s_commune_t%d" % [_current_room_id, turn_index],
+		"type": "god_room",
+		"god_id": state.get("god_id", ""),
+		"reward_rolls": reward_rolls,
+		"curse_rolls": curse_rolls,
+		"tags": ["deity_dialogue", "turn_%d" % turn_index]
+	}
+	var resolution: Dictionary = _fate_rule_engine.resolve(_player_state, room_context, intent_json)
+	var applied: Dictionary = _fate_rule_engine.apply_resolution(_player_state, resolution)
+	_player_state = applied.get("state", _player_state)
+	_player_state["turn"] = _run_turn_counter
+
+	var god_cfg: Dictionary = _god_cfg_by_id.get(String(state.get("god_id", "")), {})
+	var history: Array = _dialogue_history_by_room.get(_current_room_id, [])
+	var narrative_rsp: Dictionary = {}
+	if _ai_gateway != null:
+		narrative_rsp = await _ai_gateway.generate_narrative(god_cfg, resolution, request_text, history)
+	else:
+		narrative_rsp = {"text": _narrative_generator.generate_narrative(god_cfg, resolution, request_text), "warnings": []}
+	var narrative_text := String(narrative_rsp.get("text", "神明沉默。"))
+	_append_chat_line("%s（第%d/%d轮）" % [String(state.get("deity_name", "神明")), turn_index, max_turns], narrative_text)
+
+	for warn_variant in narrative_rsp.get("warnings", []):
+		_append_log("AI叙事降级提示：%s" % String(warn_variant))
+
+	if bool(_dialogue_cfg.get("show_rule_logs", false)):
+		for log_variant in applied.get("logs", []):
+			_append_log("规则应用：%s" % String(log_variant))
+		for report_variant in applied.get("triggered_reports", []):
+			var report: Dictionary = report_variant
+			_append_log("债务触发：%s -> %s" % [
+				String(report.get("curse_id", "")),
+				JSON.stringify(report.get("effect", {}), "", false)
+			])
+		_append_log("神明对话第%d轮 reward=%s curse=%s" % [
+			turn_index,
+			JSON.stringify(resolution.get("reward_ids", []), "", false),
+			JSON.stringify(resolution.get("curse_ids", []), "", false)
+		])
+
+	history.append({
+		"turn": turn_index,
+		"request": request_text,
+		"intent": intent_json,
+		"resolution": {
+			"reward_ids": resolution.get("reward_ids", []),
+			"curse_ids": resolution.get("curse_ids", []),
+			"delta_preview": resolution.get("delta_preview", {})
+		}
+	})
+	_dialogue_history_by_room[_current_room_id] = history
+
+	var turn_results: Array = state.get("turn_results", [])
+	turn_results.append({
+		"turn": turn_index,
+		"intent": intent_json,
+		"resolution": resolution.get("delta_preview", {})
+	})
+	state["turn_results"] = turn_results
+	state["dialogue_turn"] = turn_index
+	state["suggestions"] = _build_dialogue_suggestions(state)
+
+	if turn_index >= max_turns:
+		state["dialogue_finished"] = true
+		_prayed[_current_room_id] = true
+		_append_log("神明对话完成：共%d轮，已完成本房祈福流程。" % max_turns)
+
+	if int(_player_state.get("hp", 0)) <= 0:
+		_game_over = true
+		_victory = false
+
+	_communion_state_by_room[_current_room_id] = state
+
+func _curve_value(curve: Array, idx: int, fallback: float) -> float:
+	if curve.is_empty():
+		return fallback
+	var use_idx := clampi(idx, 0, curve.size() - 1)
+	return clampf(float(curve[use_idx]), 0.0, 1.0)
 
 func _generate_auto_request() -> String:
 	var hp := int(_player_state.get("hp", 0))
@@ -1603,47 +1865,10 @@ func _generate_auto_request() -> String:
 	if hp <= 12:
 		return "神像，请让我活下去，赐我生命。"
 	if keys <= 0:
-		return "神像，请赐我钥匙以打开封印之门。"
+		return "我需要钥匙去打开封印通路，请赐我通行。"
 	if atk <= def:
-		return "神像，请赐予我更强的力量。"
-	return "神像，请赐我稳固防护。"
-
-func _choose_blessing_index_by_request(request_text: String) -> int:
-	var text := request_text.to_lower()
-	var pool := _current_prayer_pool()
-	if pool.is_empty():
-		return -1
-	var preferred_key := ""
-	if text.find("力量") != -1 or text.find("攻击") != -1 or text.find("伤害") != -1:
-		preferred_key = "atk"
-	elif text.find("防") != -1 or text.find("护") != -1 or text.find("盾") != -1:
-		preferred_key = "def"
-	elif text.find("钥匙") != -1 or text.find("锁") != -1 or text.find("门") != -1:
-		preferred_key = "keys"
-	elif text.find("生命") != -1 or text.find("治疗") != -1 or text.find("血") != -1:
-		preferred_key = "hp"
-	elif text.find("净化") != -1 or text.find("腐化") != -1:
-		preferred_key = "corruption"
-
-	if preferred_key.is_empty():
-		return _rng.randi_range(0, pool.size() - 1)
-
-	for i in range(pool.size()):
-		var blessing: Dictionary = pool[i]
-		var effect: Dictionary = blessing.get("effect", {})
-		if effect.has(preferred_key):
-			return i
-	return _rng.randi_range(0, pool.size() - 1)
-
-func _build_deity_response(deity_name: String, request_text: String, blessing: Dictionary) -> String:
-	var label := String(blessing.get("label", "未知赐福"))
-	var summary := _effect_summary(blessing.get("effect", {}))
-	return "%s回应：你祈求“%s”。吾已裁定【%s】。%s" % [
-		deity_name,
-		request_text,
-		label,
-		summary
-	]
+		return "请赐予我更强的战斗能力。"
+	return "请给我可承受的援助。"
 
 func _effect_summary(effect: Dictionary) -> String:
 	if effect.is_empty():
@@ -1666,27 +1891,66 @@ func _refresh_prayer_panel() -> void:
 	if not can_pray:
 		return
 
-	var room := _current_room()
-	var deity_name := String(room.get("deity_name", "祝福神像"))
+	var state := _ensure_communion_state(_current_room_id)
+	var deity_name := String(state.get("deity_name", _current_room().get("deity_name", "祝福神像")))
 	var title_label: Label = _prayer_panel.get_node("PrayerTitle")
-	title_label.text = "%s" % deity_name
+	title_label.text = "神明交流｜%s" % deity_name
 
-	var pool := _current_prayer_pool()
+	var stance_row: HBoxContainer = _prayer_panel.get_node("StanceRow")
+	stance_row.visible = false
+
+	var dialogue_turn := int(state.get("dialogue_turn", 0))
+	var max_turns := int(state.get("max_turns", 3))
+	var provider_label := "AI:%s" % (_ai_gateway.provider_name() if _ai_gateway != null else "stub")
+	_turn_status_label.text = "对话轮次：%d/%d | %s" % [dialogue_turn, max_turns, provider_label]
+
+	if bool(state.get("dialogue_finished", false)):
+		_ritual_status_label.text = "本房3轮对话已完成。"
+		_auto_request_button.text = "已完成"
+		_ask_statue_button.text = "已完成"
+	else:
+		_ritual_status_label.text = "每次发送一句话，与神明交流并继续下一轮。"
+		_auto_request_button.text = "自动填充请求"
+		_ask_statue_button.text = "发送请求"
+
+	var option_title: Label = _prayer_panel.get_node("OptionTitle")
+	option_title.visible = false
+	var suggestions: Array = state.get("suggestions", [])
+	if not bool(state.get("dialogue_finished", false)) and suggestions.is_empty():
+		suggestions = _build_dialogue_suggestions(state)
+		state["suggestions"] = suggestions
+		_communion_state_by_room[_current_room_id] = state
+
 	var buttons := [_bless_option_a, _bless_option_b, _bless_option_c]
 	for i in range(buttons.size()):
 		var btn: Button = buttons[i]
-		if i < pool.size():
-			var blessing: Dictionary = pool[i]
-			btn.visible = true
-			btn.text = "%s（%s）" % [
-				String(blessing.get("label", "祝福")),
-				_effect_summary(blessing.get("effect", {}))
-			]
-		else:
-			btn.visible = false
+		btn.visible = false
 
+	_intent_preview_label.visible = false
+	_resolution_preview_label.visible = false
+	var deity_response_title: Label = _prayer_panel.get_node("DeityResponseTitle")
+	deity_response_title.visible = false
+	_ai_loading_label.visible = _dialogue_request_in_flight and not bool(state.get("dialogue_finished", false))
+	if _ai_loading_label.visible:
+		var phase := int(floor(_dialogue_loading_elapsed * 4.0)) % 4
+		_ai_loading_label.text = "神明回应中%s" % ".".repeat(phase)
+	else:
+		_ai_loading_label.text = ""
+	var sending_locked := _dialogue_request_in_flight or bool(state.get("dialogue_finished", false))
+	_auto_request_button.disabled = sending_locked
+	_ask_statue_button.disabled = sending_locked
+	_prayer_request_input.editable = not sending_locked
 	if _deity_response_output.text.is_empty():
-		_deity_response_output.text = "神像静默，等待你的请求。"
+		_deity_response_output.text = "神像静默。输入一句请求后发送，完成3轮神明对话。"
+
+func _append_chat_line(speaker: String, text: String) -> void:
+	var line := text.strip_edges()
+	if line.is_empty():
+		return
+	if not _deity_response_output.text.is_empty():
+		_deity_response_output.text += "\n"
+	_deity_response_output.text += "%s：%s" % [speaker, line]
+	_deity_response_output.scroll_to_line(maxi(0, _deity_response_output.get_line_count() - 1))
 
 func _apply_effect(effect: Dictionary, reason: String) -> void:
 	if effect.is_empty():
@@ -1780,9 +2044,9 @@ func _update_ui() -> void:
 		hint = "正在向神像输入请求：角色移动已冻结。"
 	elif _can_pray_room_base():
 		if _is_near_statue():
-			hint = "已靠近神像：可输入请求并祈祷。"
+			hint = "已靠近神像：可直接开始3轮神明对话。"
 		else:
-			hint = "祈福房已清怪：靠近神像后才能请求。"
+			hint = "祈福房已清怪：靠近神像后可开始3轮神明对话。"
 	else:
 		hint = "房间已清空：移动到门口可前往下一个房间。"
 	if _is_tutorial_active():
@@ -1797,7 +2061,7 @@ func _update_ui() -> void:
 
 	_marker_legend_label.text = "标识：怪(追击) | 远(远程) | 蓝球(XP) | 门(可通行) | 锁K(双向锁) | 神像(祈福) | 宝箱(大奖励)"
 	_adjacent_preview_label.text = _build_adjacent_preview_text()
-	_pray_button.visible = _can_pray_current_room()
+	_pray_button.visible = false
 	_refresh_prayer_panel()
 	_refresh_levelup_panel()
 	_update_minimap()
@@ -1827,7 +2091,7 @@ func _is_prayer_input_active() -> bool:
 	return _prayer_panel.visible and _prayer_request_input.has_focus()
 
 func _is_game_input_locked() -> bool:
-	return _is_prayer_input_active() or _levelup_pending
+	return _is_prayer_input_active() or _levelup_pending or _dialogue_request_in_flight
 
 func _is_tutorial_upgrade_room() -> bool:
 	var room := _current_room()

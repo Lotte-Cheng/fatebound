@@ -1,0 +1,15 @@
+{
+  "max_turns": 3,
+  "suggestion_count": 3,
+  "base_reward_rolls": 1,
+  "base_curse_rolls": 1,
+  "reward_chance_curve": [0.7, 0.85, 1.0],
+  "curse_chance_curve": [0.45, 0.65, 0.8],
+  "show_rule_logs": false,
+  "openai_retry_count": 1,
+  "suggestion_templates": [
+    "请赐我当前最需要的生存能力。",
+    "请给我代价可承受的稳定增益。",
+    "请告诉我如何以最小损失通过下一房间。"
+  ]
+}

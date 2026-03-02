@@ -6,6 +6,9 @@
       "role": "god",
       "persona": "誓约与晨光之神，重视克制、承诺与守护。",
       "speech_style": "庄重、温和、判词明确",
+      "taboo_topics": ["背誓", "无代价索取", "亵渎誓言"],
+      "favored_requests": ["守护", "治疗", "誓约"],
+      "disliked_requests": ["盲目贪婪", "背叛"],
       "reward_pool": [
         { "id": "boon_oath_guard", "weight": 1.0 },
         { "id": "boon_oath_heal", "weight": 1.0 },
@@ -50,6 +53,9 @@
       "role": "god",
       "persona": "战争与荣耀之神，偏好冒险与决断。",
       "speech_style": "强势、直接、鼓动战意",
+      "taboo_topics": ["怯战", "推诿"],
+      "favored_requests": ["力量", "战利品", "突破"],
+      "disliked_requests": ["拖延", "回避对抗"],
       "reward_pool": [
         { "id": "boon_war_power", "weight": 1.0 },
         { "id": "boon_war_rush", "weight": 0.9 },
@@ -93,6 +99,9 @@
       "role": "god",
       "persona": "奥秘与命途之神，偏爱提问与洞察。",
       "speech_style": "隐喻、冷静、引导思考",
+      "taboo_topics": ["空洞命令", "虚假誓言"],
+      "favored_requests": ["知识", "净化", "钥匙"],
+      "disliked_requests": ["盲目索取", "粗暴威胁"],
       "reward_pool": [
         { "id": "boon_mystic_insight", "weight": 1.0 },
         { "id": "boon_mystic_cleanse", "weight": 0.8 },
@@ -136,6 +145,9 @@
       "role": "evil_spirit",
       "persona": "深渊邪灵，擅长诱惑交易与代价置换。",
       "speech_style": "蛊惑、暧昧、逐字施压",
+      "taboo_topics": ["零代价交易", "圣誓庇护"],
+      "favored_requests": ["交易", "力量", "高风险回报"],
+      "disliked_requests": ["克制祈求", "拒绝代价"],
       "reward_pool": [
         { "id": "boon_abyss_bargain", "weight": 1.0 },
         { "id": "boon_abyss_key", "weight": 0.9 },

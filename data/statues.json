@@ -1,0 +1,26 @@
+{
+  "statues": [
+    {
+      "id": "statue_solune",
+      "room_ids": ["r10"],
+      "god_id": "solune",
+      "deity_name": "索露恩神像",
+      "inscription_title": "晨誓残碑",
+      "inscription_text": "碑文刻着：晨光照见誓约，背誓者必受责罚。索露恩偏爱克制、守护与兑现承诺。",
+      "favored_requests": ["守护", "治疗", "誓约"],
+      "taboo_topics": ["亵渎", "背誓", "无代价索取"],
+      "ritual_id": "ritual_solar_oath"
+    },
+    {
+      "id": "statue_nyra",
+      "room_ids": ["r12"],
+      "god_id": "nyra",
+      "deity_name": "妮拉神像",
+      "inscription_title": "回响石板",
+      "inscription_text": "碑文刻着：提问即仪式，洞察即代价。妮拉偏爱理性求知，厌恶虚张声势。",
+      "favored_requests": ["知识", "净化", "钥匙"],
+      "taboo_topics": ["空洞威胁", "盲目索取"],
+      "ritual_id": "ritual_echo_focus"
+    }
+  ]
+}

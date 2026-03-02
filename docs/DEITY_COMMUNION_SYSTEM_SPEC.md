@@ -1,101 +1,70 @@
 # Deity Communion System Spec
 
-更新时间：2026-02-20
+更新时间：2026-03-02
 
 ## 目标
 
-把“祈福按钮”升级为可感知的完整流程：
+把祈福房交互固定为最直接、可复现的 3 轮神明对话：
 
-1. 神像碑文阅读（了解神像故事与偏好）。
-2. 特定仪式召唤神明（消耗资源/满足条件）。
-3. 固定轮次对话（建议 3 轮）。
-4. 每轮规则判定奖励机会（AI 不直接发奖励）。
+1. 清空祈福房敌人。
+2. 靠近神像后开启对话面板。
+3. 输入一句请求（可自动填充）并发送。
+4. 规则引擎结算 reward/curse，叙事只复述结果。
+5. 共 3 轮，完成后本房祈福结束。
 
-## 交互流程
+## 当前交互约束
 
-1. 玩家靠近神像 -> 显示碑文摘要与“继续阅读”。
-2. 阅读后解锁仪式面板：展示需求与预期风险。
-3. 点击执行仪式（成功/失败由规则判定）。
-4. 仪式成功则进入神明对话界面。
-5. 固定轮次对话结束后输出回合汇总与总结算。
+1. 无碑文步骤。
+2. 无仪式步骤。
+3. 无姿态按钮（restraint/pact/blasphemy 不再由 UI 选择）。
+4. 输入框聚焦时角色移动冻结。
+5. 只能在“已清房 + 靠近神像 + 未完成本房祈福”时请求。
+6. 交流面板默认隐藏意图/规则 JSON，仅显示聊天记录。
+7. 请求发出后显示“神明回应中...”加载动画，等待 AI 返回。
 
-## 固定轮次规则
+## 每轮输入输出
 
-- 默认 `max_turns = 3`。
-- 每轮输入一条玩家话术。
-- 每轮输出：
-  - `intent_json`
-  - `resolution_preview`
-  - 神明文本回应
-- 达到上限后自动结束并结算。
+输入：
+- `player_text`
+- `room_id/god_id/turn_index`（上下文）
 
-## 建议系统（玩家辅助）
+输出展示：
+- `intent_json`（AI 或 stub 解析）
+- `resolution`（规则引擎输出，唯一有效果来源）
+- `narrative_text`（神明文本，不得新增效果）
 
-每轮提供 2-3 条建议表达：
+## 数据文件
 
-1. 保守建议（低风险）。
-2. 平衡建议（中风险）。
-3. 激进建议（高风险）。
+1. `data/dialogue_config.json`
+   - `max_turns`
+   - `suggestion_count`
+   - `base_reward_rolls/base_curse_rolls`
+   - `reward_chance_curve/curse_chance_curve`
+   - `suggestion_templates`（直接文本列表）
+2. `data/ai_provider.json`
+   - `provider`: `stub` 或 `openai`
+   - `api_key_env`: 默认 `OPENAI_API_KEY`
+   - `model/timeout/schema/deity_prompt_dir`
+3. `data/prompts/*.prompt.txt`
+   - `default.prompt.txt`
+   - `solune.prompt.txt`
+   - `tharos.prompt.txt`
+   - `nyra.prompt.txt`
+   - `murmur.prompt.txt`
+   - 用于定义每位神明的固定说话风格，便于直接编辑。
 
-建议来源：
-- 当前神明人设 + 玩家状态 + 当前构筑缺口。
-- 先模板生成，后续可接 GPT 改写为自然表达。
+## AI Provider 规则
 
-## 人设一致性约束
+1. `stub` 默认可离线运行。
+2. `openai` 失败（无 key/超时/JSON 非法）自动回退到 stub。
+3. 叙事文本过审失败（越权）也回退到本地模板。
 
-每个神明配置以下字段：
+## API Key 配置
 
-1. `persona`: 语气与价值观。
-2. `taboo_topics`: 禁忌点。
-3. `favored_requests`: 偏好诉求。
-4. `disliked_requests`: 厌恶诉求。
-5. `speaking_style`: 用词风格标签。
+OpenAI Key 不写入仓库文件，按环境变量读取：
 
-叙事输出要求：
+```bash
+export OPENAI_API_KEY="sk-..."
+```
 
-1. 文本必须符合该神明语气。
-2. 禁止输出未在 `resolution` 中出现的数值变化。
-3. 出现越界内容时，回退到本地模板回应。
-
-## 数据文件建议
-
-1. `data/statues.json`
-   - 碑文、背景故事、仪式需求、绑定神明 id。
-2. `data/gods.json`
-   - 人设、偏好、禁忌、奖励/诅咒池偏置。
-3. `data/dialogue_config.json`
-   - `max_turns`, `suggestion_count`, `timeout_sec`。
-4. `data/rituals.json`
-   - 仪式配方、成功率修正、失败后果。
-
-## API 集成规范（可选）
-
-## Provider 模式
-
-1. `stub`（默认离线）。
-2. `openai`（你提供 API 后启用）。
-
-## 调用边界
-
-1. 意图解析：模型必须返回严格 JSON。
-2. 叙事生成：模型只接收 `resolution` 进行复述。
-
-## 失败回退
-
-1. API 超时：自动降级到 stub。
-2. JSON 校验失败：最多重试 1 次，再降级模板。
-3. 叙事越权：丢弃并改用本地文案。
-
-## 接口草案
-
-意图解析输入：
-- `player_text`, `god_id`, `turn_index`, `player_state`, `build_tags`
-
-意图解析输出（JSON）：
-- `wish_type`, `tone`, `risk_preference`, `constraints[]`, `target`, `ritual_action`
-
-叙事生成输入：
-- `god_profile`, `resolution`, `recent_dialogue`
-
-叙事生成输出：
-- `narrative_text`（仅文本，无机制字段）
+若要改变量名，修改 `data/ai_provider.json` 的 `api_key_env` 字段即可。

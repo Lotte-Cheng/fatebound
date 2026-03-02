@@ -20,6 +20,9 @@
    - 必须先清怪。
    - 必须靠近神像。
    - 输入请求时角色移动冻结。
+   - 完整流程：固定 3 轮神明对话 -> 每轮规则结算。
+   - 仅显示聊天内容（不显示意图/规则 JSON 调试字段）。
+   - 对话请求中显示“神明回应中...”加载动画。
 6. 教学关（`r01`）操作引导闭环：
    - 分步骤引导：移动 -> 开火 -> 击杀升级 -> 选择构筑。
    - 世界空间动态箭头 + UI 脉冲提示。
@@ -34,6 +37,7 @@
 10. 小地图探索点亮 + 相邻房间有限预判。
 11. 日志持续输出战斗、解锁、祈福、结算事件。
 12. 战场可视区域会按左侧 HUD 动态让位，避免文字被遮挡。
+13. AI Provider 支持 `stub/openai` 切换（默认 `stub`），`openai` 异常自动降级离线流程。
 
 ---
 
@@ -62,6 +66,12 @@
 
 CSV 更新后无需改代码，直接运行场景即可生效。
 
+神明对话与 AI 配置：
+- `data/dialogue_config.json`（固定轮次、每轮 reward/curse 曲线、建议模板）
+- `data/ai_provider.json`（`stub/openai`、模型、超时、schema）
+- `data/prompts/*.prompt.txt`（每位神明独立 prompt，可直接改说话风格）
+- `data/dialogue_config.json` 中 `show_rule_logs=false` 时，神明对话不会输出技术结算日志。
+
 ---
 
 ## 快速运行
@@ -70,6 +80,12 @@ CSV 更新后无需改代码，直接运行场景即可生效。
 
 ```bash
 /Applications/Godot.app/Contents/MacOS/Godot --path .
+```
+
+### API 检测场景（OpenAI）
+
+```bash
+/Applications/Godot.app/Contents/MacOS/Godot --path . --scene res://scenes/tools/AIApiProbe.tscn
 ```
 
 ### Headless 启动校验
@@ -82,6 +98,12 @@ CSV 更新后无需改代码，直接运行场景即可生效。
 
 ```bash
 /Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s res://scripts/tests/run_tests.gd --log-file ./godot-tests.log
+```
+
+### 测试（AI Provider 降级）
+
+```bash
+/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s res://scripts/tests/test_dialogue_ai_gateway.gd --log-file ./godot-gateway-test.log
 ```
 
 ---
@@ -117,7 +139,7 @@ CSV 更新后无需改代码，直接运行场景即可生效。
 - `docs/DUNGEON_RUNTIME_REWORK.md`：动作地牢运行时重构与现状
 - `docs/ACTION_DUNGEON_MVP_PLAN.md`：动作化 MVP 计划
 - `docs/BUILD_ROUTE_AND_ENDINGS.md`：完整构筑路线与结局定义（Demo）
-- `docs/DEITY_COMMUNION_SYSTEM_SPEC.md`：神像-仪式-召神-对话系统规格
+- `docs/DEITY_COMMUNION_SYSTEM_SPEC.md`：神明三轮对话系统规格（待补充更新）
 - `docs/GAME_DESIGN_DOCUMENT.md`：设计文档（GDD）
 - `docs/PROJECT_BRIEF.md`：项目简述
 - `docs/AI_FEASIBILITY_ANALYSIS.md`：AI 可行性分析

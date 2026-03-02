@@ -32,6 +32,7 @@
   - 房间探索与战斗循环
   - 锁门/钥匙机制
   - 祈福房交互（清怪 + 距离门槛 + 输入冻结）
+  - 神像流程（直接固定 3 轮对话 -> 规则结算）
   - 小地图点亮与相邻预判
   - 日志输出与数值结算
 
@@ -41,6 +42,10 @@
 - `scripts/core/intent_parser.gd`
 - `scripts/core/narrative_generator.gd`
 - `scripts/ai_stub.gd`
+- `scripts/ai/dialogue_ai_gateway.gd`
+  - provider 切换（`stub/openai`）
+  - openai 失败自动降级
+  - 意图 schema 校验与叙事白名单
 
 说明：该层用于规则决策、意图解析、叙事生成的分层验证，保证“规则是唯一真相来源”。
 
@@ -49,8 +54,9 @@
 - `scripts/tests/run_tests.gd`
 - `scripts/tests/test_fate_rule_engine.gd`
 - `scripts/tests/test_rule_engine.gd`
+- `scripts/tests/test_dialogue_ai_gateway.gd`
 
-当前覆盖：可复现性、姿态偏置、战斗阈值、延迟诅咒触发。
+当前覆盖：可复现性、姿态偏置（规则层）、战斗阈值、延迟诅咒触发。
 
 ## 4. 数据层（data）
 
@@ -64,6 +70,9 @@
 - `data/entities.json`
 - `data/game_config.json`
 - `data/ai_stub.json`
+- `data/dialogue_config.json`
+- `data/ai_provider.json`
+- `data/prompts/*.prompt.txt`（每神明独立对话提示词）
 
 ## 5. 当前运行模式
 

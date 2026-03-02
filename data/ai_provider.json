@@ -1,0 +1,34 @@
+{
+  "provider": "openai",
+  "api_key_env": "OPENAI_API_KEY",
+  "deity_prompt_dir": "res://data/prompts",
+  "chat_completions_url": "https://api.openai.com/v1/chat/completions",
+  "model": "gpt-4.1-mini",
+  "timeout_sec": 12,
+  "temperature_intent": 0.0,
+  "temperature_narrative": 0.6,
+  "intent_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "wish_type": {
+        "type": "string",
+        "enum": ["combat_boost", "heal", "key_request", "knowledge", "curse_trade", "defy_god"]
+      },
+      "tone": {
+        "type": "string",
+        "enum": ["calm", "desperate", "arrogant", "pleading", "angry"]
+      },
+      "risk_preference": {
+        "type": "string",
+        "enum": ["low", "mid", "high"]
+      },
+      "constraints": {
+        "type": "array",
+        "items": { "type": "string" }
+      },
+      "target": { "type": "string" }
+    },
+    "required": ["wish_type", "tone", "risk_preference", "constraints", "target"]
+  }
+}

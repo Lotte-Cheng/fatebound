@@ -1,0 +1,32 @@
+{
+  "rituals": [
+    {
+      "id": "ritual_solar_oath",
+      "label": "晨光点誓",
+      "description": "低声立誓，唤醒晨光神性回响。",
+      "cost": { "hp": 0, "keys": 0 },
+      "base_success": 0.82,
+      "corruption_penalty_per_point": 0.03,
+      "level_bonus_per_level": 0.02,
+      "success_effect": { "corruption": -1 },
+      "failure_effect": { "corruption": 1 },
+      "allow_retry": false,
+      "success_reward_roll_bonus": 1,
+      "failure_note": "誓言不被承认，低语在你体内回响。"
+    },
+    {
+      "id": "ritual_echo_focus",
+      "label": "回响聚焦",
+      "description": "以指尖触碰碑纹，令隐秘回音显形。",
+      "cost": { "hp": 1, "keys": 0 },
+      "base_success": 0.76,
+      "corruption_penalty_per_point": 0.025,
+      "level_bonus_per_level": 0.015,
+      "success_effect": { "def": 1 },
+      "failure_effect": { "hp": -1, "corruption": 1 },
+      "allow_retry": true,
+      "success_reward_roll_bonus": 1,
+      "failure_note": "仪式阵列短暂失稳，你听见了不该听见的低语。"
+    }
+  ]
+}
