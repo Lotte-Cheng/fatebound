@@ -4,17 +4,24 @@
     { "id": "boon_oath_heal", "label": "晨光治疗", "effects": { "hp": 4 }, "severity": 1, "tags": ["heal"] },
     { "id": "boon_oath_fate", "label": "命线稳固", "effects": { "def": 1, "hp": 2 }, "severity": 1, "tags": ["defense"] },
     { "id": "boon_oath_key", "label": "神谕钥匙", "effects": { "keys": 1 }, "severity": 1, "tags": ["key"] },
+    { "id": "boon_oath_aegis", "label": "誓约圣盾", "effects": { "def": 1 }, "combat_effects": { "damage_reduction": 1 }, "severity": 2, "tags": ["defense"] },
 
     { "id": "boon_war_power", "label": "战神强袭", "effects": { "atk": 2 }, "severity": 2, "tags": ["combat_boost"] },
     { "id": "boon_war_rush", "label": "冲锋狂热", "effects": { "atk": 1, "hp": 2 }, "severity": 2, "tags": ["combat_boost"] },
     { "id": "boon_war_loot", "label": "战利品", "effects": { "keys": 1, "hp": 1 }, "severity": 1, "tags": ["loot"] },
+    { "id": "boon_war_fury", "label": "战神狂怒", "effects": { "atk": 1 }, "combat_effects": { "fire_rate_mult": 0.1, "bullet_damage_bonus": 1 }, "severity": 2, "tags": ["combat_boost"] },
+    { "id": "boon_war_pierce", "label": "贯穿之力", "effects": {}, "combat_effects": { "pierce_count": 1, "bullet_damage_bonus": 1 }, "severity": 2, "tags": ["combat_boost"] },
 
     { "id": "boon_mystic_insight", "label": "命运洞察", "effects": { "def": 1, "keys": 1 }, "severity": 2, "tags": ["knowledge"] },
     { "id": "boon_mystic_cleanse", "label": "净化低语", "effects": { "corruption": -1, "def": 1 }, "severity": 1, "tags": ["cleanse"] },
     { "id": "boon_mystic_key", "label": "秘门通行", "effects": { "keys": 1 }, "severity": 1, "tags": ["key_request"] },
+    { "id": "boon_mystic_focus", "label": "神秘聚焦", "effects": {}, "combat_effects": { "crit_chance": 0.15, "pierce_count": 1 }, "severity": 2, "tags": ["knowledge"] },
+    { "id": "boon_mystic_wisdom", "label": "智者洞见", "effects": {}, "combat_effects": { "xp_mult": 0.25, "pickup_radius_bonus": 40 }, "severity": 2, "tags": ["knowledge"] },
 
     { "id": "boon_abyss_bargain", "label": "深渊交易", "effects": { "atk": 2, "hp": 2 }, "severity": 3, "tags": ["curse_trade", "high_risk"] },
     { "id": "boon_abyss_key", "label": "黑钥馈赠", "effects": { "keys": 2 }, "severity": 2, "tags": ["key_request", "high_risk"] },
-    { "id": "boon_abyss_fate", "label": "扭曲幸运", "effects": { "hp": 3 }, "severity": 2, "tags": ["high_risk"] }
+    { "id": "boon_abyss_fate", "label": "扭曲幸运", "effects": { "hp": 3 }, "severity": 2, "tags": ["high_risk"] },
+    { "id": "boon_abyss_hunger", "label": "深渊饥渴", "effects": { "corruption": 1 }, "combat_effects": { "lifesteal": 2, "bullet_damage_bonus": 2 }, "severity": 3, "tags": ["curse_trade", "high_risk"] },
+    { "id": "boon_abyss_crit", "label": "噬魂锐击", "effects": { "corruption": 1 }, "combat_effects": { "crit_chance": 0.2, "crit_mult": 0.5 }, "severity": 3, "tags": ["curse_trade", "high_risk"] }
   ]
 }

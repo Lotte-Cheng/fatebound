@@ -111,6 +111,7 @@ var _bullets: Array[Dictionary] = []
 var _enemy_projectiles: Array[Dictionary] = []
 var _xp_orbs: Array[Dictionary] = []
 var _enemies: Array[Dictionary] = []
+var _enemy_id_counter := 0
 var _battle_is_survival := false
 var _battle_timer_total := 0.0
 var _battle_timer_remaining := 0.0
@@ -129,8 +130,17 @@ var _build_modifiers := {
 	"projectile_bonus": 0,
 	"move_speed_bonus": 0.0,
 	"damage_reduction": 0,
-	"bullet_damage_bonus": 0
+	"bullet_damage_bonus": 0,
+	"pierce_count": 0,
+	"xp_mult": 0.0,
+	"pickup_radius_bonus": 0.0,
+	"crit_chance": 0.0,
+	"crit_mult": 0.5,
+	"lifesteal": 0.0,
+	"bullet_size_mult": 0.0
 }
+var _input_unlock_grace_timer: float = 0.0
+const INPUT_UNLOCK_GRACE_PERIOD: float = 0.1
 var _owned_build_stacks: Dictionary = {}
 var _owned_slot_counts: Dictionary = {}
 var _owned_build_tags: Dictionary = {}
@@ -642,8 +652,16 @@ func _reset_build_runtime() -> void:
 		"projectile_bonus": 0,
 		"move_speed_bonus": 0.0,
 		"damage_reduction": 0,
-		"bullet_damage_bonus": 0
+		"bullet_damage_bonus": 0,
+		"pierce_count": 0,
+		"xp_mult": 0.0,
+		"pickup_radius_bonus": 0.0,
+		"crit_chance": 0.0,
+		"crit_mult": 0.5,
+		"lifesteal": 0.0,
+		"bullet_size_mult": 0.0
 	}
+	_input_unlock_grace_timer = 0.0
 
 func _reset_tutorial_runtime() -> void:
 	_tutorial_spawn_pos = Vector2.ZERO
@@ -656,6 +674,8 @@ func _process(delta: float) -> void:
 	_shoot_cooldown = maxf(0.0, _shoot_cooldown - delta)
 	_touch_hit_cooldown = maxf(0.0, _touch_hit_cooldown - delta)
 	_door_cooldown = maxf(0.0, _door_cooldown - delta)
+	if _input_unlock_grace_timer > 0.0:
+		_input_unlock_grace_timer = maxf(0.0, _input_unlock_grace_timer - delta)
 	if _dialogue_request_in_flight:
 		_dialogue_loading_elapsed += delta
 
@@ -776,6 +796,8 @@ func _draw() -> void:
 func _move_player(delta: float) -> void:
 	if _is_game_input_locked():
 		return
+	if _input_unlock_grace_timer > 0.0:
+		return
 	var axis := Vector2.ZERO
 	if Input.is_physical_key_pressed(KEY_A) or Input.is_physical_key_pressed(KEY_LEFT):
 		axis.x -= 1.0
@@ -807,22 +829,34 @@ func _try_fire(target_pos: Vector2) -> void:
 	if _is_tutorial_active() and _tutorial_move_done and _tutorial_shots_fired < TUTORIAL_SHOTS_REQUIRED:
 		_tutorial_shots_fired += 1
 
-	var damage := maxi(1, int(_player_state.get("atk", 1)) + int(_build_modifiers.get("bullet_damage_bonus", 0)))
+	var base_damage := maxi(1, int(_player_state.get("atk", 1)) + int(_build_modifiers.get("bullet_damage_bonus", 0)))
+	var crit_chance := clampf(float(_build_modifiers.get("crit_chance", 0.0)), 0.0, 1.0)
+	var crit_mult := maxf(0.0, float(_build_modifiers.get("crit_mult", 0.5)))
+	var pierce_count := maxi(0, int(_build_modifiers.get("pierce_count", 0)))
 	var projectile_count := maxi(1, 1 + int(_build_modifiers.get("projectile_bonus", 0)))
 	var center := (projectile_count - 1) * 0.5
 	var spread_step := deg_to_rad(10.0)
 	for i in range(projectile_count):
 		var angle_offset := (float(i) - center) * spread_step
 		var shot_dir := dir.rotated(angle_offset)
+		var is_crit := _rng.randf() < crit_chance
+		var damage := base_damage
+		if is_crit:
+			damage = maxi(1, int(float(base_damage) * (1.0 + crit_mult)))
 		_bullets.append({
 			"pos": _player_pos,
 			"vel": shot_dir * BULLET_SPEED,
 			"ttl": 1.1,
-			"damage": damage
+			"damage": damage,
+			"is_crit": is_crit,
+			"pierce_remaining": pierce_count,
+			"hit_enemies": []
 		})
 
 func _update_bullets(delta: float) -> void:
 	var alive: Array[Dictionary] = []
+	var bullet_size_mult := maxf(0.0, float(_build_modifiers.get("bullet_size_mult", 0.0)))
+	var effective_bullet_radius := BULLET_RADIUS * (1.0 + bullet_size_mult)
 	for bullet_variant in _bullets:
 		var bullet: Dictionary = bullet_variant
 		var pos: Vector2 = bullet.get("pos", Vector2.ZERO) + bullet.get("vel", Vector2.ZERO) * delta
@@ -830,19 +864,37 @@ func _update_bullets(delta: float) -> void:
 		bullet["pos"] = pos
 		bullet["ttl"] = ttl
 
-		var hit := false
+		var pierce_remaining := int(bullet.get("pierce_remaining", 0))
+		var hit_enemies: Array = bullet.get("hit_enemies", [])
+		var should_destroy := false
+		var enemies_to_remove: Array[int] = []
+
 		for i in range(_enemies.size()):
 			var enemy: Dictionary = _enemies[i]
-			if pos.distance_to(enemy.get("pos", Vector2.ZERO)) <= ENEMY_RADIUS + BULLET_RADIUS:
+			var enemy_id: int = int(enemy.get("id", i))
+			if hit_enemies.has(enemy_id):
+				continue
+			if pos.distance_to(enemy.get("pos", Vector2.ZERO)) <= ENEMY_RADIUS + effective_bullet_radius:
 				var hp := int(enemy.get("hp", 1)) - int(bullet.get("damage", 1))
 				enemy["hp"] = hp
 				_enemies[i] = enemy
-				hit = true
+				hit_enemies.append(enemy_id)
 				if hp <= 0:
 					_on_enemy_defeated(enemy)
-					_enemies.remove_at(i)
-				break
-		if hit:
+					enemies_to_remove.append(i)
+				if pierce_remaining <= 0:
+					should_destroy = true
+					break
+				else:
+					pierce_remaining -= 1
+
+		for idx in range(enemies_to_remove.size() - 1, -1, -1):
+			_enemies.remove_at(enemies_to_remove[idx])
+
+		bullet["pierce_remaining"] = pierce_remaining
+		bullet["hit_enemies"] = hit_enemies
+
+		if should_destroy:
 			continue
 
 		if ttl > 0.0 and _play_rect().has_point(pos):
@@ -869,8 +921,9 @@ func _update_xp_orbs(delta: float) -> void:
 	if _xp_orbs.is_empty():
 		return
 	var alive: Array[Dictionary] = []
-	var pickup_radius := float(_spawn_global_tuning.get("xp_orb_pickup_radius", 22.0))
-	var magnet_radius := float(_spawn_global_tuning.get("xp_orb_magnet_radius", 168.0))
+	var pickup_radius_bonus := float(_build_modifiers.get("pickup_radius_bonus", 0.0))
+	var pickup_radius := float(_spawn_global_tuning.get("xp_orb_pickup_radius", 22.0)) + pickup_radius_bonus
+	var magnet_radius := float(_spawn_global_tuning.get("xp_orb_magnet_radius", 168.0)) + pickup_radius_bonus
 	var magnet_speed := float(_spawn_global_tuning.get("xp_orb_magnet_speed", 420.0))
 	var drift_damp := float(_spawn_global_tuning.get("xp_orb_drift_damp", 5.0))
 	for orb_variant in _xp_orbs:
@@ -1170,7 +1223,9 @@ func _spawn_enemy(kind: String, elite: bool) -> bool:
 		speed *= 1.08
 		xp = maxi(2, int(round(float(_battle_spawn_profile.get("elite_xp", 3)) * float(_spawn_global_tuning.get("xp_gain_scale", 1.0)))))
 
+	_enemy_id_counter += 1
 	var enemy := {
+		"id": _enemy_id_counter,
 		"pos": pos,
 		"kind": kind,
 		"hp": hp,
@@ -1231,6 +1286,14 @@ func _should_clear_current_room() -> bool:
 func _on_enemy_defeated(enemy: Dictionary) -> void:
 	if _is_tutorial_active():
 		_tutorial_kills += 1
+	var lifesteal := float(_build_modifiers.get("lifesteal", 0.0))
+	if lifesteal > 0.0:
+		var heal_amount := int(lifesteal)
+		var hp_before := int(_player_state.get("hp", 0))
+		var hp_after := mini(60, hp_before + heal_amount)
+		if hp_after > hp_before:
+			_player_state["hp"] = hp_after
+			_append_log("吸血回复：HP %d -> %d (+%d)" % [hp_before, hp_after, hp_after - hp_before])
 	var xp_gain := int(enemy.get("xp", 1))
 	if xp_gain <= 0:
 		return
@@ -1255,7 +1318,9 @@ func _drop_xp_orbs(origin: Vector2, xp_gain: int, elite: bool) -> void:
 		})
 
 func _add_run_xp(xp_gain: int) -> void:
-	_run_xp += xp_gain
+	var xp_mult := maxf(0.0, float(_build_modifiers.get("xp_mult", 0.0)))
+	var actual_gain := maxi(1, int(round(float(xp_gain) * (1.0 + xp_mult))))
+	_run_xp += actual_gain
 	while _run_xp >= _run_xp_to_next:
 		_run_xp -= _run_xp_to_next
 		_run_level += 1
@@ -1677,6 +1742,7 @@ func _on_ask_statue_pressed() -> void:
 	await _run_dialogue_turn(state, request_text)
 	_dialogue_request_in_flight = false
 	_dialogue_loading_elapsed = 0.0
+	_input_unlock_grace_timer = INPUT_UNLOCK_GRACE_PERIOD
 	_refresh_prayer_panel()
 
 func _on_bless_option_pressed(index: int) -> void:
@@ -1789,6 +1855,7 @@ func _run_dialogue_turn(state: Dictionary, request_text: String) -> void:
 	var applied: Dictionary = _fate_rule_engine.apply_resolution(_player_state, resolution)
 	_player_state = applied.get("state", _player_state)
 	_player_state["turn"] = _run_turn_counter
+	_apply_reward_combat_effects(resolution.get("reward_ids", []))
 
 	var god_cfg: Dictionary = _god_cfg_by_id.get(String(state.get("god_id", "")), {})
 	var history: Array = _dialogue_history_by_room.get(_current_room_id, [])
@@ -1799,6 +1866,7 @@ func _run_dialogue_turn(state: Dictionary, request_text: String) -> void:
 		narrative_rsp = {"text": _narrative_generator.generate_narrative(god_cfg, resolution, request_text), "warnings": []}
 	var narrative_text := String(narrative_rsp.get("text", "神明沉默。"))
 	_append_chat_line("%s（第%d/%d轮）" % [String(state.get("deity_name", "神明")), turn_index, max_turns], narrative_text)
+	_append_effect_summary(resolution)
 
 	for warn_variant in narrative_rsp.get("warnings", []):
 		_append_log("AI叙事降级提示：%s" % String(warn_variant))
@@ -1951,6 +2019,80 @@ func _append_chat_line(speaker: String, text: String) -> void:
 		_deity_response_output.text += "\n"
 	_deity_response_output.text += "%s：%s" % [speaker, line]
 	_deity_response_output.scroll_to_line(maxi(0, _deity_response_output.get_line_count() - 1))
+
+func _append_effect_summary(resolution: Dictionary) -> void:
+	var parts: Array[String] = []
+	for reward_id_variant in resolution.get("reward_ids", []):
+		var reward_id := String(reward_id_variant)
+		var label := _get_reward_label(reward_id)
+		parts.append("+%s" % label)
+	for curse_id_variant in resolution.get("curse_ids", []):
+		var curse_id := String(curse_id_variant)
+		var label := _get_curse_label(curse_id)
+		parts.append("-%s" % label)
+	var delta: Dictionary = resolution.get("delta_preview", {})
+	var stat_parts: Array[String] = []
+	for key in ["hp", "atk", "def", "keys", "corruption"]:
+		var val := int(delta.get(key, 0))
+		if val == 0:
+			continue
+		var display_name := _stat_display_name(key)
+		var sign := "+" if val > 0 else ""
+		stat_parts.append("%s%s%d" % [display_name, sign, val])
+	if not stat_parts.is_empty():
+		parts.append(" ".join(stat_parts))
+	if parts.is_empty():
+		return
+	var summary := "【效果】" + " | ".join(parts)
+	if not _deity_response_output.text.is_empty():
+		_deity_response_output.text += "\n"
+	_deity_response_output.text += summary
+	_deity_response_output.scroll_to_line(maxi(0, _deity_response_output.get_line_count() - 1))
+
+func _get_reward_label(reward_id: String) -> String:
+	for reward_variant in _reward_cfg.get("rewards", []):
+		var reward: Dictionary = reward_variant
+		if String(reward.get("id", "")) == reward_id:
+			return String(reward.get("label", reward_id))
+	return reward_id
+
+func _get_curse_label(curse_id: String) -> String:
+	for curse_variant in _curse_cfg.get("curses", []):
+		var curse: Dictionary = curse_variant
+		if String(curse.get("id", "")) == curse_id:
+			return String(curse.get("label", curse_id))
+	return curse_id
+
+func _stat_display_name(key: String) -> String:
+	match key:
+		"hp": return "HP"
+		"atk": return "ATK"
+		"def": return "DEF"
+		"keys": return "钥匙"
+		"corruption": return "腐化"
+		_: return key
+
+func _apply_reward_combat_effects(reward_ids: Array) -> void:
+	for reward_id_variant in reward_ids:
+		var reward_id := String(reward_id_variant)
+		var reward_cfg := _get_reward_config(reward_id)
+		var combat_effects: Dictionary = reward_cfg.get("combat_effects", {})
+		if combat_effects.is_empty():
+			continue
+		for key_variant in combat_effects.keys():
+			var key := String(key_variant)
+			var delta := float(combat_effects.get(key, 0.0))
+			if _build_modifiers.has(key):
+				var before := float(_build_modifiers.get(key, 0.0))
+				_build_modifiers[key] = before + delta
+				_append_log("神明祝福战斗效果：%s %.2f -> %.2f (+%.2f)" % [key, before, float(_build_modifiers.get(key, 0.0)), delta])
+
+func _get_reward_config(reward_id: String) -> Dictionary:
+	for reward_variant in _reward_cfg.get("rewards", []):
+		var reward: Dictionary = reward_variant
+		if String(reward.get("id", "")) == reward_id:
+			return reward
+	return {}
 
 func _apply_effect(effect: Dictionary, reason: String) -> void:
 	if effect.is_empty():

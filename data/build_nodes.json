@@ -34,6 +34,30 @@
       "label": "债务超载",
       "required_tags": ["debt", "power"],
       "effect": { "atk": 1, "corruption": 1 }
+    },
+    {
+      "id": "syn_precision_master",
+      "label": "精准大师",
+      "required_tags": ["precision", "precision"],
+      "effect": { "crit_chance": 0.1, "bullet_damage_bonus": 1 }
+    },
+    {
+      "id": "syn_area_control",
+      "label": "范围压制",
+      "required_tags": ["projectile", "area"],
+      "effect": { "bullet_size_mult": 0.2, "pierce_count": 1 }
+    },
+    {
+      "id": "syn_knowledge_seeker",
+      "label": "求知者",
+      "required_tags": ["knowledge", "blessing"],
+      "effect": { "xp_mult": 0.2, "pickup_radius_bonus": 30 }
+    },
+    {
+      "id": "syn_bloodbound",
+      "label": "血契",
+      "required_tags": ["debt", "lifesteal"],
+      "effect": { "lifesteal": 1, "atk": 1 }
     }
   ],
   "nodes": [
@@ -173,6 +197,99 @@
       "effect": {
         "atk": 2,
         "hp": -4
+      }
+    },
+    {
+      "id": "node_piercing_shot",
+      "label": "贯穿射击",
+      "description": "子弹穿透 +1",
+      "slot": "weapon",
+      "tags": ["projectile", "precision"],
+      "tier_cost": 2,
+      "weight": 0.85,
+      "max_stack": 2,
+      "effect": {
+        "pierce_count": 1
+      }
+    },
+    {
+      "id": "node_magnet_field",
+      "label": "磁力护场",
+      "description": "拾取范围 +50",
+      "slot": "passive",
+      "tags": ["utility"],
+      "tier_cost": 1,
+      "weight": 0.9,
+      "max_stack": 2,
+      "effect": {
+        "pickup_radius_bonus": 50
+      }
+    },
+    {
+      "id": "node_critical_eye",
+      "label": "锐眼一击",
+      "description": "暴击率 +10%",
+      "slot": "passive",
+      "tags": ["precision", "power"],
+      "tier_cost": 1,
+      "weight": 0.8,
+      "max_stack": 3,
+      "effect": {
+        "crit_chance": 0.1
+      }
+    },
+    {
+      "id": "node_critical_force",
+      "label": "暴击强化",
+      "description": "暴击伤害 +50%",
+      "slot": "passive",
+      "tags": ["precision", "power"],
+      "tier_cost": 2,
+      "required_tags": ["precision"],
+      "weight": 0.7,
+      "max_stack": 2,
+      "effect": {
+        "crit_mult": 0.5
+      }
+    },
+    {
+      "id": "node_wisdom_blessing",
+      "label": "智慧祝福",
+      "description": "经验获取 +15%",
+      "slot": "godsend",
+      "tags": ["blessing", "knowledge"],
+      "tier_cost": 1,
+      "weight": 0.85,
+      "max_stack": 3,
+      "effect": {
+        "xp_mult": 0.15
+      }
+    },
+    {
+      "id": "node_blood_pact",
+      "label": "血之契约",
+      "description": "击杀回血 +1，腐化 +1",
+      "slot": "debt",
+      "tags": ["debt", "lifesteal"],
+      "tier_cost": 2,
+      "weight": 0.6,
+      "max_stack": 2,
+      "effect": {
+        "lifesteal": 1,
+        "corruption": 1
+      }
+    },
+    {
+      "id": "node_wide_spread",
+      "label": "扩散弹幕",
+      "description": "子弹体积 +30%",
+      "slot": "weapon",
+      "tags": ["projectile", "area"],
+      "tier_cost": 1,
+      "weight": 0.75,
+      "max_stack": 2,
+      "effect": {
+        "bullet_size_mult": 0.3
       }
     }
   ]
