@@ -12,6 +12,7 @@ mono/
 *.log
 *.tmp
 *.temp
+images/*.import
 
 # OS / editor files
 .DS_Store
