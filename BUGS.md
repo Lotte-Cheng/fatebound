@@ -2,38 +2,43 @@
 
 ## Active Bugs
 
-### [BUG-001] 神像回复内容与其身份不符
-**状态**: 待修复
-**优先级**: 中
-**发现时间**: 2026-03-10
-
-**描述**:
-神像的回复和其本身身份目前不符。不同神明应该有不同的回复风格和内容，但当前实现可能没有正确区分。
-
-**影响范围**:
-- 神明对话系统
-- 玩家沉浸感
-- 游戏叙事一致性
-
-**相关文件**:
-- `scripts/ai/dialogue_ai_gateway.gd`
-- `scripts/core/narrative_generator.gd`
-- `scripts/dungeon/dungeon_run.gd` (对话处理部分)
-
-**可能原因**:
-- AI提示词没有充分强调神明身份
-- 神明配置信息没有正确传递给生成系统
-- 本地叙事生成器没有根据神明ID区分回复风格
-
-**待调查**:
-- [ ] 检查god_cfg是否正确传递给AI gateway
-- [ ] 检查AI prompt是否包含神明身份信息
-- [ ] 检查本地narrative_generator是否根据god_id生成不同风格
-- [ ] 测试不同神明的回复差异
+_暂无待修复bug_
 
 ---
 
 ## Fixed Bugs
+
+### [BUG-001] 神像回复内容与其身份不符
+**状态**: 已修复 ✓
+**优先级**: 中
+**发现时间**: 2026-03-10
+**修复时间**: 2026-03-10
+
+**描述**:
+神像的回复和其本身身份目前不符。不同神明应该有不同的回复风格和内容，所有神明都表现得像索露恩。
+
+**原因**:
+prayer房间配置中缺少 `god_id` 字段，导致 `_guess_god_id_for_room()` 函数通过 `deity_name` 匹配失败：
+- 房间的 `deity_name` 是 "索露恩神像"、"妮拉神像"（包含"神像"）
+- gods.json中的 `name` 是 "索露恩"、"妮拉"（不包含"神像"）
+- 字符串精确匹配失败，所有神明都fallback到默认值 "solune"
+
+**修复方案**:
+在 `data/dungeon_layout.json` 的所有prayer房间中添加 `god_id` 字段：
+- r10: 添加 `"god_id": "solune"`
+- r12: 添加 `"god_id": "nyra"`
+
+**相关文件**:
+- `data/dungeon_layout.json` (房间配置)
+- `scripts/dungeon/dungeon_run.gd:1834-1844` (_guess_god_id_for_room函数)
+
+**验证**:
+每个神明都有完整的配置系统：
+- gods.json: 包含4个神明的persona、speech_style等配置
+- data/prompts/*.prompt.txt: 每个神明都有专属AI提示词
+- narrative_generator.gd: 本地fallback也实现了神明差异化
+
+---
 
 ### [BUG-000] 与神像交互后玩家自动移动
 **状态**: 已修复 ✓
