@@ -140,7 +140,7 @@ var _build_modifiers := {
 	"bullet_size_mult": 0.0
 }
 var _input_unlock_grace_timer: float = 0.0
-const INPUT_UNLOCK_GRACE_PERIOD: float = 0.1
+const INPUT_UNLOCK_GRACE_PERIOD: float = 0.5
 var _owned_build_stacks: Dictionary = {}
 var _owned_slot_counts: Dictionary = {}
 var _owned_build_tags: Dictionary = {}
@@ -2234,7 +2234,7 @@ func _is_prayer_input_active() -> bool:
 	return _prayer_panel.visible and _prayer_request_input.has_focus()
 
 func _is_game_input_locked() -> bool:
-	return _is_prayer_input_active() or _levelup_pending or _dialogue_request_in_flight
+	return _is_prayer_input_active() or _levelup_pending or _dialogue_request_in_flight or _prayer_panel.visible
 
 func _is_tutorial_upgrade_room() -> bool:
 	var room := _current_room()
